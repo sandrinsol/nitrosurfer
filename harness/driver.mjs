@@ -16,7 +16,7 @@
 //   node driver.mjs shot <rom.gba> [frames=300] [out.png=out/shot.png]
 
 import http from 'node:http';
-import { readFile, writeFile, stat, unlink } from 'node:fs/promises';
+import { readFile, writeFile, stat, unlink, mkdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -121,7 +121,11 @@ export class GBAHarness {
   async screenshot(outPath) {
     const b64 = await this.page.evaluate(() => window.GBA.screenshot());
     const buf = Buffer.from(b64, 'base64');
-    if (outPath) await writeFile(path.resolve(process.cwd(), outPath), buf);
+    if (outPath) {
+      const abs = path.resolve(process.cwd(), outPath);
+      await mkdir(path.dirname(abs), { recursive: true }); // out/ is gitignored; ensure it exists
+      await writeFile(abs, buf);
+    }
     return buf;
   }
 
