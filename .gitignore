@@ -1,0 +1,5 @@
+.DS_Store
+harness/node_modules/
+harness/out/
+harness/tests/goldens/*.diff.png
+*.log

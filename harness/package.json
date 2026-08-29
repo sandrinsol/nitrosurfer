@@ -1,0 +1,29 @@
+{
+  "name": "gba-test-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server + headless harness to test GBA games in the EmulatorJS mgba core: input, screenshots, save states, and real RAM reads — no third-party emulator.",
+  "keywords": ["mcp", "gba", "emulator", "mgba", "emulatorjs", "testing", "ai", "game-testing"],
+  "license": "GPL-3.0-or-later",
+  "bin": {
+    "gba-test-mcp": "mcp-server.mjs"
+  },
+  "scripts": {
+    "mcp": "node mcp-server.mjs",
+    "postinstall": "playwright install chromium",
+    "shot": "node driver.mjs shot",
+    "run-script": "node runner.mjs",
+    "smoke": "node tests/smoke.mjs",
+    "determinism": "node tests/determinism.mjs",
+    "memory": "node tests/memory.mjs",
+    "test": "node tests/smoke.mjs && node tests/determinism.mjs && node tests/memory.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "playwright": "^1.48.0",
+    "zod": "^4.5.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

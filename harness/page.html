@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GBA Harness</title>
+  <style>
+    html, body { margin: 0; background: #000; }
+    /* Fixed size so screenshots are deterministic. GBA native is 240x160 (3:2). */
+    #game { width: 720px; height: 480px; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script>
+  // Headless control bridge over the bundled EmulatorJS mgba core.
+  // Everything the Node driver calls goes through window.GBA.
+  (function () {
+    const params = new URLSearchParams(location.search);
+    const rom = params.get('rom'); // absolute path served by the harness static server
+
+    // --- EmulatorJS config (headless + deterministic) ---
+    window.EJS_player = '#game';
+    window.EJS_core = 'gba';
+    window.EJS_gameName = 'harness';
+    window.EJS_gameUrl = rom;
+    window.EJS_pathtodata = '../data/';
+    window.EJS_startOnLoaded = true;
+    window.EJS_volume = 0;            // mute; audio is irrelevant to tests
+    window.EJS_language = 'en-US';
+    window.EJS_disableAutoLang = false;
+    window.EJS_threads = false;       // single-thread: deterministic, no COOP/COEP needed
+    window.EJS_disableDatabases = true;
+
+    // --- Bridge ---
+    const GBA = (window.GBA = {});
+    GBA._startPromise = new Promise((res) => (GBA._resolveStart = res));
+    GBA.started = false;
+    window.EJS_onGameStart = () => { GBA.started = true; GBA._resolveStart(); };
+
+    // RetroArch joypad button ids used by simulateInput(player, id, value).
+    const BUTTONS = { B:0, SELECT:2, START:3, UP:4, DOWN:5, LEFT:6, RIGHT:7, A:8, L:10, R:11 };
+    GBA.BUTTONS = Object.keys(BUTTONS);
+
+    const gm = () => window.EJS_emulator.gameManager;
+
+    GBA.ready = () => GBA._startPromise;
+    GBA.frameNum = () => gm().getFrameNum(); // absolute, boot-referenced
+    GBA.videoDimensions = () => ({ w: gm().getVideoDimensions('width'), h: gm().getVideoDimensions('height') });
+
+    GBA.setButton = (name, pressed) => {
+      const id = BUTTONS[String(name).toUpperCase()];
+      if (id === undefined) throw new Error('Unknown button: ' + name);
+      gm().simulateInput(0, id, pressed ? 32767 : 0);
+    };
+
+    // Poll the core's own frame counter until it reaches an absolute target.
+    // A wall-clock timeout guards against a paused/stalled main loop.
+    function waitUntil(targetFrame, timeoutMs = 30000) {
+      return new Promise((res, rej) => {
+        const t0 = performance.now();
+        (function check() {
+          if (gm().getFrameNum() >= targetFrame) return res(gm().getFrameNum());
+          if (performance.now() - t0 > timeoutMs)
+            return rej(new Error(`waitFrames timeout: frame ${gm().getFrameNum()} < target ${targetFrame}`));
+          requestAnimationFrame(check);
+        })();
+      });
+    }
+
+    // Deterministic clock: targets accumulate on ONE absolute timeline anchored at
+    // boot (frame 0), so identical scripts stop on identical emulated frames across
+    // runs regardless of boot jitter. (Verified bit-identical.)
+    GBA._target = 0;
+    GBA.waitFrames = (n) => { GBA._target += n; return waitUntil(GBA._target); };
+    GBA.waitUntilFrame = (abs) => { if (abs > GBA._target) GBA._target = abs; return waitUntil(abs); };
+
+    // Press a button, hold it for holdFrames, release, then settle for releaseFrames.
+    GBA.tap = async (name, holdFrames = 4, releaseFrames = 4) => {
+      GBA.setButton(name, true);
+      await GBA.waitFrames(holdFrames);
+      GBA.setButton(name, false);
+      await GBA.waitFrames(releaseFrames);
+    };
+
+    const u8ToB64 = (bytes) => {
+      const u8 = new Uint8Array(bytes);
+      let bin = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < u8.length; i += CHUNK) bin += String.fromCharCode.apply(null, u8.subarray(i, i + CHUNK));
+      return btoa(bin);
+    };
+    const b64ToU8 = (b64) => {
+      const bin = atob(b64);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    };
+
+    GBA.screenshot = async () => u8ToB64(await gm().screenshot()); // PNG -> base64
+    GBA.saveState = async () => u8ToB64(await gm().getState());     // savestate -> base64
+    GBA.loadState = (b64) => gm().loadState(b64ToU8(b64));
+    GBA.restart = () => gm().restart();
+
+    // Live system RAM, IF the loaded core exports the libretro memory API.
+    // The bundled mgba core does NOT (returns null); a core rebuilt with
+    // _retro_get_memory_data/_size exported lights this up automatically.
+    GBA.readSystemRam = () => {
+      const M = gm().Module;
+      if (typeof M._retro_get_memory_data !== 'function' || typeof M._retro_get_memory_size !== 'function') return null;
+      const size = M._retro_get_memory_size(2 /* RETRO_MEMORY_SYSTEM_RAM */);
+      const ptr = M._retro_get_memory_data(2);
+      if (!size || !ptr) return null;
+      return { base64: u8ToB64(M.HEAPU8.subarray(ptr, ptr + size)), size };
+    };
+    GBA.hasMemoryAccess = () => GBA.readSystemRam() !== null;
+
+    // Boot the emulator.
+    const s = document.createElement('script');
+    s.src = '../data/loader.js';
+    document.body.appendChild(s);
+  })();
+  </script>
+</body>
+</html>

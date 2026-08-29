@@ -1,0 +1,16 @@
+{
+  "rom": "../anguna.gba",
+  "steps": [
+    { "wait": 240 },
+    { "shot": "boot" },
+    { "assert": "goldens/boot.png", "threshold": 0.02, "name": "boot" },
+    { "tap": "START" },
+    { "wait": 120 },
+    { "record": { "frames": 180, "every": 60, "prefix": "intro" } },
+    { "saveState": "afterintro" },
+    { "hold": "RIGHT", "frames": 60 },
+    { "shot": "moved" },
+    { "loadState": "afterintro" },
+    { "shot": "restored" }
+  ]
+}
