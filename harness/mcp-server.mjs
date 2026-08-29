@@ -32,15 +32,17 @@ const Button = z.enum(BUTTONS);
 
 const server = new McpServer({ name: 'gba-test-harness', version: '1.0.0' });
 
-server.tool('load_rom', 'Boot a .gba ROM in the headless emulator (replaces any current ROM). Path is resolved relative to the server\'s working directory.',
-  { rom: z.string().describe('Path to the .gba (or .zip) ROM file') },
+server.tool('load_rom', 'Boot a GBA/GB/GBC ROM (.gba/.gb/.gbc) in the headless emulator (replaces any current ROM). The system is auto-detected from the extension. Path is resolved relative to the server\'s working directory.',
+  { rom: z.string().describe('Path to the ROM file (.gba, .gb, .gbc, or .zip)') },
   async ({ rom }) => {
     try {
       if (gba) { await gba.close().catch(() => {}); gba = null; states.clear(); }
       gba = await GBAHarness.launch(rom);
       romName = path.basename(rom);
       const dims = await gba.videoDimensions();
-      return text(`Loaded ${romName}. Video ${dims.w}x${dims.h}. Emulator started at frame ${await gba.frameNum()}.`);
+      const sys = gba.system === 'gb' ? 'GB/GBC' : 'GBA';
+      const ramNote = gba.system === 'gba' ? '' : ' (read_memory is GBA-only; other tools work).';
+      return text(`Loaded ${romName} as ${sys}. Video ${dims.w}x${dims.h}. Started at frame ${await gba.frameNum()}.${ramNote}`);
     } catch (e) { gba = null; return errText(`load_rom failed: ${e.message}`); }
   });
 
@@ -134,7 +136,7 @@ server.tool('reset', 'Reset the current game (soft restart).', {},
   async () => { try { requireRom(); await gba.restart(); return text('Game reset.'); } catch (e) { return errText(e.message); } });
 
 server.tool('status', 'Report whether a ROM is loaded and the current frame.', {},
-  async () => text(gba ? `ROM: ${romName}, frame ${await gba.frameNum()}, ${states.size} saved states, memory-read: save-state (always available).` : 'No ROM loaded.'));
+  async () => text(gba ? `ROM: ${romName} (${gba.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await gba.frameNum()}, ${states.size} saved states${gba.system === 'gba' ? ', read_memory available' : ', read_memory GBA-only'}.` : 'No ROM loaded.'));
 
 // Clean shutdown.
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { await gba?.close(); } catch {} process.exit(0); });

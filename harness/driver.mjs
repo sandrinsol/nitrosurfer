@@ -52,9 +52,10 @@ function startServer(rootDir) {
 }
 
 export class GBAHarness {
-  constructor({ browser, context, page, server, tempRom }) {
+  constructor({ browser, context, page, server, tempRom, system }) {
     this.browser = browser; this.context = context; this.page = page; this.server = server;
     this._tempRom = tempRom; // copied-in ROM to clean up on close (if any)
+    this.system = system;    // 'gba' (mgba) or 'gb' (gambatte, covers GB + GBC)
   }
 
   static async launch(romPath, { headless = true, timeout = 60000 } = {}) {
@@ -93,14 +94,19 @@ export class GBAHarness {
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     try {
       await page.waitForFunction(() => window.EJS_emulator && window.EJS_emulator.gameManager, { timeout });
-      await page.evaluate(() => window.GBA.ready());
+      // Bound the wait for the 'start' event so a ROM that never boots fails fast.
+      await page.evaluate((ms) => Promise.race([
+        window.GBA.ready(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('game did not start (ROM may be unsupported by this core)')), ms)),
+      ]), timeout);
     } catch (e) {
       await browser.close(); await new Promise((r) => server.close(r));
       if (tempRom) await unlink(tempRom).catch(() => {});
       throw new Error(`Emulator failed to start${errors.length ? ` (page errors: ${errors.join('; ')})` : ''}: ${e.message}`);
     }
 
-    return new GBAHarness({ browser, context, page, server, tempRom });
+    const system = await page.evaluate(() => window.GBA.system);
+    return new GBAHarness({ browser, context, page, server, tempRom, system });
   }
 
   frameNum() { return this.page.evaluate(() => window.GBA.frameNum()); }
@@ -135,12 +141,17 @@ export class GBAHarness {
     return r ? Buffer.from(r.base64, 'base64') : null;
   }
 
+  _requireGbaForMemory() {
+    if (this.system !== 'gba')
+      throw new Error(`read_memory is currently GBA-only; this is a ${this.system.toUpperCase()} game (its save state uses a different format). Screenshots, input, states and golden asserts work for GB/GBC.`);
+  }
+
   /** Parse a fresh save state into typed GBA RAM regions (ewram, iwram, vram, ...). */
-  async readRegions() { return parseState(await this.saveState()); }
+  async readRegions() { this._requireGbaForMemory(); return parseState(await this.saveState()); }
 
   /** Read `length` bytes at a GBA bus address (e.g. 0x03000000). Returns a Buffer.
    *  Snapshots a save state under the hood, so it reflects the current frame. */
-  async readMemory(addr, length = 1) { return readMemory(await this.saveState(), addr, length); }
+  async readMemory(addr, length = 1) { this._requireGbaForMemory(); return readMemory(await this.saveState(), addr, length); }
   async readU8(addr) { return (await this.readMemory(addr, 1)).readUInt8(0); }
   async readU16(addr) { return (await this.readMemory(addr, 2)).readUInt16LE(0); }
   async readU32(addr) { return (await this.readMemory(addr, 4)).readUInt32LE(0); }

@@ -5,9 +5,11 @@ and builds on the following GPL-3.0 software:
 
 - **EmulatorJS** — the emulator frontend and packaged cores in `data/`.
   GPL-3.0. https://github.com/EmulatorJS/EmulatorJS
-- **mGBA** (libretro core, compiled to WebAssembly, in `data/cores/`).
+- **mGBA** (libretro core, WebAssembly, `data/cores/mgba-wasm.data`) — runs GBA.
   MPL-2.0 upstream; distributed here as part of the EmulatorJS bundle.
   https://github.com/mgba-emu/mgba
+- **Gambatte** (libretro core, WebAssembly, `data/cores/gambatte-wasm.data`) — runs
+  GB/GBC. GPL-2.0-or-later. https://github.com/libretro/gambatte-libretro
 
 Bundled sample game:
 

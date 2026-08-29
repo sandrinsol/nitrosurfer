@@ -1,8 +1,9 @@
 # GBA Test Harness + MCP Server
 
-Test GBA games with an AI agent — **no third-party emulator**. It drives the
-bundled EmulatorJS **mgba** core (the exact core `../index.html` runs for humans)
-in headless Chromium, and exposes it two ways:
+Test **GBA / GB / GBC** games with an AI agent — **no third-party emulator**. It
+drives the bundled EmulatorJS cores (**mgba** for GBA, **gambatte** for GB/GBC —
+the same cores `../index.html` runs for humans) in headless Chromium, selecting the
+core automatically from the ROM extension, and exposes it two ways:
 
 - **MCP server** (`mcp-server.mjs`) — any MCP host (Claude Code, Claude Desktop,
   Cursor, …) gets tools to load a ROM, press buttons, **see the screen** (inline
@@ -37,10 +38,16 @@ Claude Code / Claude Desktop config:
 }
 ```
 
-Then the agent has these tools: `load_rom`, `wait_frames`, `press`, `set_button`,
-`screenshot` (returns the frame as an image), `read_memory`, `save_state`,
-`load_state`, `assert_golden`, `frame_number`, `reset`, `status`. ROM paths are
-resolved relative to the server's working directory.
+Then the agent has these tools: `load_rom` (`.gba/.gb/.gbc`, system auto-detected),
+`wait_frames`, `press`, `set_button`, `screenshot` (returns the frame as an image),
+`read_memory` (GBA only), `save_state`, `load_state`, `assert_golden`,
+`frame_number`, `reset`, `status`. ROM paths are resolved relative to the server's
+working directory.
+
+**Console support:** GBA (mgba) and GB/GBC (gambatte). Input, screenshots, save
+states, determinism, and golden asserts work for all three. `read_memory` currently
+parses mgba's GBA save state only; GB/GBC RAM reads would need a gambatte save-state
+parser (not yet implemented) — the tool returns a clear error for GB/GBC.
 
 ## Quick check
 

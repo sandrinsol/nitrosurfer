@@ -6,9 +6,9 @@ bundled in the `data/` folder — **no internet connection required**, ever.
 Two ways to use it:
 
 - **Play in a browser** — see below.
-- **Let an AI test your GBA games** — the [`harness/`](harness/) folder is an **MCP
-  server** (+ Node library) that drives this same emulator headlessly: load a ROM,
-  press buttons, capture screenshots the agent can *see*, read real GBA RAM, and
+- **Let an AI test your GBA/GB/GBC games** — the [`harness/`](harness/) folder is an
+  **MCP server** (+ Node library) that drives this same emulator headlessly: load a
+  ROM, press buttons, capture screenshots the agent can *see*, read real GBA RAM, and
   assert against golden frames. No third-party emulator. See
   [harness/README.md](harness/README.md).
 

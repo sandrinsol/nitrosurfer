@@ -16,7 +16,8 @@
     "smoke": "node tests/smoke.mjs",
     "determinism": "node tests/determinism.mjs",
     "memory": "node tests/memory.mjs",
-    "test": "node tests/smoke.mjs && node tests/determinism.mjs && node tests/memory.mjs"
+    "gb": "node tests/gb.mjs",
+    "test": "node tests/smoke.mjs && node tests/determinism.mjs && node tests/memory.mjs && node tests/gb.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

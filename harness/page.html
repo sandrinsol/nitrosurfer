@@ -18,9 +18,14 @@
     const params = new URLSearchParams(location.search);
     const rom = params.get('rom'); // absolute path served by the harness static server
 
+    // Pick the EmulatorJS system by ROM extension:
+    //   .gba -> 'gba' (mgba core), .gb/.gbc -> 'gb' (gambatte core).
+    const ext = (rom || '').split('?')[0].split('.').pop().toLowerCase();
+    const system = ext === 'gb' || ext === 'gbc' ? 'gb' : 'gba';
+
     // --- EmulatorJS config (headless + deterministic) ---
     window.EJS_player = '#game';
-    window.EJS_core = 'gba';
+    window.EJS_core = system;
     window.EJS_gameName = 'harness';
     window.EJS_gameUrl = rom;
     window.EJS_pathtodata = '../data/';
@@ -33,6 +38,7 @@
 
     // --- Bridge ---
     const GBA = (window.GBA = {});
+    GBA.system = system; // 'gba' or 'gb'
     GBA._startPromise = new Promise((res) => (GBA._resolveStart = res));
     GBA.started = false;
     window.EJS_onGameStart = () => { GBA.started = true; GBA._resolveStart(); };
