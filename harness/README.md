@@ -40,8 +40,9 @@ Claude Code / Claude Desktop config:
 
 Then the agent has these tools: `load_rom` (`.gba/.gb/.gbc`, system auto-detected),
 `wait_frames`, `press`, `set_button`, `screenshot` (returns the frame as an image),
-`read_memory`, `save_state`, `load_state`, `assert_golden`, `frame_number`, `reset`,
-`status`. ROM paths are resolved relative to the server's working directory.
+`read_memory`, `write_memory`, `save_state`, `load_state`, `assert_golden`,
+`frame_number`, `reset`, `status`. ROM paths are resolved relative to the server's
+working directory.
 
 **Console support:** GBA (mgba) and GB/GBC (gambatte) — everything works for all
 three: input, screenshots, save states, determinism, golden asserts, **and RAM
@@ -92,6 +93,8 @@ the local static server can serve them.
 | `readMemory(addr, len)` | Read `len` bytes at a bus address (GBA or GB/GBC) → `Buffer`. |
 | `readU8/readU16/readU32(addr)` | Read a little-endian integer at a bus address. |
 | `readRegions()` | Typed RAM views (GBA: `ewram/iwram/vram/pram/oam/io`; GB: `wram/vram/sram/hram/io`). |
+| `writeMemory(addr, buf)` | Set-up poke: patch RAM via save state (see caveats below). |
+| `writeU8/writeU16/writeU32(addr, v)` | Write a little-endian integer at a bus address. |
 | `hasMemoryAccess()` | `true` only if the core exports *live* RAM (not required for reads). |
 | `videoDimensions()` | `{ w, h }` — `240x160` for GBA. |
 | `restart()` | Reset the game. |
@@ -188,7 +191,22 @@ Or via the MCP `read_memory` tool (`address`, `length`, `as: hex|u8|u16|u32|s8|s
 
 Both compute offsets per state, so nothing is hardcoded per ROM or save type.
 
-**Limits.** Read-only, at save-state granularity (snapshot whenever you want to
-inspect — that's exactly when you assert). Writing/poking RAM would need a core built
-with the libretro memory exports; `readSystemRam()`/`hasMemoryAccess()` auto-detect
-and use such a core if you ever drop one in, but it isn't required for reads.
+## Writing RAM (set-up poke)
+
+Set up a scenario without playing to it — e.g. start a test at low HP:
+
+```js
+await gba.writeU8(0x03000010, 1);                 // GBA IWRAM
+await gba.writeMemory(0xC000, Buffer.from([1,2])); // GB WRAM
+```
+
+Or the MCP `write_memory` tool (`address` + `value`/`as`, or raw `hex`).
+
+**How it works & its limits.** It patches the RAM inside a save state and reloads it,
+then confirms the value took by reading back. Because the game keeps running, this is
+a *set-up* poke, not a live mid-frame cheat: a value the game recomputes every frame
+may be overwritten again immediately (the call reports what's actually there after).
+Values the game only changes through gameplay (HP, inventory, position) stick.
+Frame-accurate live poke would need a core built with the libretro memory exports;
+`readSystemRam()`/`hasMemoryAccess()` auto-detect such a core if you ever drop one in,
+but it isn't required for reads or set-up writes.

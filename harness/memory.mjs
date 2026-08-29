@@ -99,6 +99,18 @@ export function readMemory(stateOrParsed, addr, length = 1) {
   return out;
 }
 
+/** Patch RAM at a GBA address inside a save-state buffer (in place) and return it.
+ *  The region views alias the state buffer, so writing them patches the state. */
+export function writeMemory(state, addr, data) {
+  const regions = parseState(state);
+  const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data);
+  for (let i = 0; i < bytes.length; i++) {
+    const [buf, off] = locate(regions, (addr + i) >>> 0);
+    buf[off] = bytes[i];
+  }
+  return state;
+}
+
 export const readU8 = (s, a) => readMemory(s, a, 1).readUInt8(0);
 export const readU16 = (s, a) => readMemory(s, a, 2).readUInt16LE(0);
 export const readU32 = (s, a) => readMemory(s, a, 4).readUInt32LE(0);

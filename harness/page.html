@@ -104,7 +104,17 @@
 
     GBA.screenshot = async () => u8ToB64(await gm().screenshot()); // PNG -> base64
     GBA.saveState = async () => u8ToB64(await gm().getState());     // savestate -> base64
-    GBA.loadState = (b64) => gm().loadState(b64ToU8(b64));
+    // A save state includes the frame counter, so loading it rewinds getFrameNum.
+    // Give the core a few frames to actually apply the load, then re-anchor the
+    // deterministic frame clock so later waitFrames() calls stay correct.
+    GBA.loadState = (b64) => new Promise((res) => {
+      gm().loadState(b64ToU8(b64));
+      let n = 0;
+      (function tick() {
+        if (n++ >= 4) { GBA._target = gm().getFrameNum(); return res(); }
+        requestAnimationFrame(tick);
+      })();
+    });
     GBA.restart = () => gm().restart();
 
     // Live system RAM, IF the loaded core exports the libretro memory API.

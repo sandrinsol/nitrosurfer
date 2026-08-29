@@ -79,3 +79,15 @@ export function readMemory(stateOrParsed, addr, length = 1) {
   }
   return out;
 }
+
+/** Patch RAM at a GB address inside a save-state buffer (in place) and return it.
+ *  The region views alias the state buffer, so writing them patches the state. */
+export function writeMemory(state, addr, data) {
+  const r = parseState(state);
+  const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data);
+  for (let i = 0; i < bytes.length; i++) {
+    const [buf, off] = locate(r, (addr + i) & 0xffff);
+    buf[off] = bytes[i];
+  }
+  return state;
+}

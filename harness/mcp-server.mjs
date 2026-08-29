@@ -96,6 +96,36 @@ server.tool('read_memory', 'Read RAM at a bus address, reflecting the current fr
     } catch (e) { return errText(e.message); }
   });
 
+server.tool('write_memory', 'Write RAM at a bus address to SET UP state (e.g. HP=1) — useful for reaching a test scenario without playing to it. Provide either `value`+`as`, or raw `hex` bytes. NOTE: this reloads the whole machine state (not a live mid-frame poke); it takes effect on the next frame/read.',
+  {
+    address: z.number().int().nonnegative().describe('Bus address, e.g. 0x03000010 (GBA) or 0xC000 (GB)'),
+    value: z.number().int().optional().describe('Integer value to write (used with `as`)'),
+    as: z.enum(['u8', 'u16', 'u32']).default('u8').describe('Width/endianness (little-endian) for `value`'),
+    hex: z.string().optional().describe('Alternative: raw bytes as hex, e.g. "deadbeef" (overrides value)'),
+  },
+  async ({ address, value, as, hex }) => {
+    try {
+      requireRom();
+      let bytes;
+      if (hex != null) {
+        const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+        if (clean.length === 0 || clean.length % 2) return errText('hex must be an even number of hex digits');
+        bytes = Buffer.from(clean, 'hex');
+      } else if (value != null) {
+        const width = { u8: 1, u16: 2, u32: 4 }[as];
+        bytes = Buffer.alloc(width);
+        if (width === 1) bytes.writeUInt8(value & 0xff, 0);
+        else if (width === 2) bytes.writeUInt16LE(value & 0xffff, 0);
+        else bytes.writeUInt32LE(value >>> 0, 0);
+      } else {
+        return errText('provide `value` (with `as`) or `hex`');
+      }
+      await gba.writeMemory(address, bytes);
+      const back = await gba.readMemory(address, bytes.length);
+      return text(`Wrote ${bytes.length}B @0x${address.toString(16)}; read back: ${back.toString('hex').replace(/(..)/g, '$1 ').trim()}`);
+    } catch (e) { return errText(e.message); }
+  });
+
 server.tool('save_state', 'Snapshot the full machine state under a name you can restore later.',
   { id: z.string().default('default') },
   async ({ id }) => {

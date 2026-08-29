@@ -156,6 +156,27 @@ export class GBAHarness {
   async readU16(addr) { return (await this.readMemory(addr, 2)).readUInt16LE(0); }
   async readU32(addr) { return (await this.readMemory(addr, 4)).readUInt32LE(0); }
 
+  /** Write bytes at a bus address by patching a save state and reloading it.
+   *  NOTE: this reloads the whole machine state — use it to *set up* state (e.g. HP=1)
+   *  between actions, not as a live mid-frame poke. Reflected on the next read/frame. */
+  async writeMemory(addr, data) {
+    const bytes = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    const state = await this.saveState();
+    this._mem.writeMemory(state, addr, bytes);
+    await this.loadState(state);
+    // Confirm the patch took (loadState applies asynchronously). Poll a read-back in
+    // real time; return as soon as it matches. Volatile locations the running game
+    // overwrites may never match — that's inherent, so give up after a bounded wait.
+    for (let i = 0; i < 30; i++) {
+      if ((await this.readMemory(addr, bytes.length)).equals(bytes)) return true;
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    return false;
+  }
+  async writeU8(addr, v) { await this.writeMemory(addr, Buffer.from([v & 0xff])); }
+  async writeU16(addr, v) { const b = Buffer.alloc(2); b.writeUInt16LE(v & 0xffff); await this.writeMemory(addr, b); }
+  async writeU32(addr, v) { const b = Buffer.alloc(4); b.writeUInt32LE(v >>> 0); await this.writeMemory(addr, b); }
+
   async close() {
     await this.browser?.close();
     await new Promise((r) => this.server?.close(r));

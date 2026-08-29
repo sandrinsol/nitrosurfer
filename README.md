@@ -8,7 +8,7 @@ Two ways to use it:
 - **Play in a browser** — see below.
 - **Let an AI test your GBA/GB/GBC games** — the [`harness/`](harness/) folder is an
   **MCP server** (+ Node library) that drives this same emulator headlessly: load a
-  ROM, press buttons, capture screenshots the agent can *see*, read real RAM (GBA + GB/GBC), and
+  ROM, press buttons, capture screenshots the agent can *see*, read and write real RAM (GBA + GB/GBC), and
   assert against golden frames. No third-party emulator. See
   [harness/README.md](harness/README.md).
 

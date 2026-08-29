@@ -19,7 +19,8 @@
     "gb": "node tests/gb.mjs",
     "gb-determinism": "node tests/gb-determinism.mjs",
     "gb-cgb": "node tests/gb-cgb.mjs",
-    "test": "node tests/smoke.mjs && node tests/determinism.mjs && node tests/memory.mjs && node tests/gb.mjs && node tests/gb-determinism.mjs && node tests/gb-cgb.mjs"
+    "write": "node tests/write.mjs",
+    "test": "node tests/smoke.mjs && node tests/determinism.mjs && node tests/memory.mjs && node tests/write.mjs && node tests/gb.mjs && node tests/gb-determinism.mjs && node tests/gb-cgb.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
