@@ -48,9 +48,22 @@ try {
   ok('save state works', st.length > 16 && st.subarray(0, 7).toString('latin1') === 'RASTATE', `${st.length}B`);
   await gba.loadState(st);
 
-  let threw = false, msg = '';
-  try { await gba.readU16(0x03000000); } catch (e) { threw = true; msg = e.message; }
-  ok('read_memory is gated to GBA', threw, threw ? 'throws clear error' : 'did NOT gate!');
+  // GB memory reads: the ROM sets LCDC=0x91 and BGP=0xE4, which land in the IO page.
+  const lcdc = await gba.readU8(0xff40);
+  const bgp = await gba.readU8(0xff47);
+  ok('GB read_memory: LCDC @0xFF40 == 0x91', lcdc === 0x91, `0x${lcdc.toString(16)}`);
+  ok('GB read_memory: BGP @0xFF47 == 0xE4', bgp === 0xe4, `0x${bgp.toString(16)}`);
+
+  // WRAM is readable (8 KB on DMG).
+  const regions = await gba.readRegions();
+  ok('GB WRAM region present (0x2000)', regions.wram && regions.wram.length === 0x2000, `${regions.wram?.length}`);
+  const wramByte = await gba.readU8(0xc000);
+  ok('GB read_memory: WRAM 0xC000 reads a byte', typeof wramByte === 'number');
+
+  // ROM/unsupported region is rejected clearly.
+  let threw = false;
+  try { await gba.readU8(0x0000); } catch { threw = true; }
+  ok('GB read_memory rejects ROM address', threw);
 } finally {
   await gba.close();
 }

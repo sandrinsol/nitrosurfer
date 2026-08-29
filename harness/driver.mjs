@@ -20,7 +20,8 @@ import { readFile, writeFile, stat, unlink } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseState, readMemory } from './memory.mjs';
+import * as gbaMem from './memory.mjs';
+import * as gbMem from './gb-memory.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..'); // the "Emulator Gba" folder
@@ -141,17 +142,16 @@ export class GBAHarness {
     return r ? Buffer.from(r.base64, 'base64') : null;
   }
 
-  _requireGbaForMemory() {
-    if (this.system !== 'gba')
-      throw new Error(`read_memory is currently GBA-only; this is a ${this.system.toUpperCase()} game (its save state uses a different format). Screenshots, input, states and golden asserts work for GB/GBC.`);
-  }
+  get _mem() { return this.system === 'gb' ? gbMem : gbaMem; }
 
-  /** Parse a fresh save state into typed GBA RAM regions (ewram, iwram, vram, ...). */
-  async readRegions() { this._requireGbaForMemory(); return parseState(await this.saveState()); }
+  /** Parse a fresh save state into typed RAM regions.
+   *  GBA: { ewram, iwram, vram, pram, oam, io }. GB/GBC: { wram, vram, sram, hram, io }. */
+  async readRegions() { return this._mem.parseState(await this.saveState()); }
 
-  /** Read `length` bytes at a GBA bus address (e.g. 0x03000000). Returns a Buffer.
-   *  Snapshots a save state under the hood, so it reflects the current frame. */
-  async readMemory(addr, length = 1) { this._requireGbaForMemory(); return readMemory(await this.saveState(), addr, length); }
+  /** Read `length` bytes at a bus address. GBA e.g. 0x03000000 (IWRAM); GB/GBC e.g.
+   *  0xC000 (WRAM), 0xFF80 (HRAM). Snapshots a save state, so it reflects the current
+   *  frame. Addresses are interpreted for whichever console the loaded ROM is. */
+  async readMemory(addr, length = 1) { return this._mem.readMemory(await this.saveState(), addr, length); }
   async readU8(addr) { return (await this.readMemory(addr, 1)).readUInt8(0); }
   async readU16(addr) { return (await this.readMemory(addr, 2)).readUInt16LE(0); }
   async readU32(addr) { return (await this.readMemory(addr, 4)).readUInt32LE(0); }

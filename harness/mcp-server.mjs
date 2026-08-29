@@ -13,7 +13,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import path from 'node:path';
 import { GBAHarness } from './driver.mjs';
-import { readMemory, parseState } from './memory.mjs';
 import { assertGolden } from './assert.mjs';
 
 // ---- Emulator session (one ROM at a time) ----
@@ -41,8 +40,7 @@ server.tool('load_rom', 'Boot a GBA/GB/GBC ROM (.gba/.gb/.gbc) in the headless e
       romName = path.basename(rom);
       const dims = await gba.videoDimensions();
       const sys = gba.system === 'gb' ? 'GB/GBC' : 'GBA';
-      const ramNote = gba.system === 'gba' ? '' : ' (read_memory is GBA-only; other tools work).';
-      return text(`Loaded ${romName} as ${sys}. Video ${dims.w}x${dims.h}. Started at frame ${await gba.frameNum()}.${ramNote}`);
+      return text(`Loaded ${romName} as ${sys}. Video ${dims.w}x${dims.h}. Started at frame ${await gba.frameNum()}.`);
     } catch (e) { gba = null; return errText(`load_rom failed: ${e.message}`); }
   });
 
@@ -80,16 +78,16 @@ server.tool('screenshot', 'Capture the current frame as a PNG image (returned in
     } catch (e) { return errText(e.message); }
   });
 
-server.tool('read_memory', 'Read GBA RAM at a bus address (e.g. 0x03000000 IWRAM, 0x02000000 EWRAM). Reads from a fresh save state, so it reflects the current frame.',
+server.tool('read_memory', 'Read RAM at a bus address, reflecting the current frame. GBA: e.g. 0x03000000 (IWRAM), 0x02000000 (EWRAM). GB/GBC: e.g. 0xC000 (WRAM), 0xFF80 (HRAM), 0xFE00 (OAM). The address is interpreted for whichever console the loaded ROM is.',
   {
-    address: z.number().int().nonnegative().describe('GBA bus address, e.g. 0x03000010'),
+    address: z.number().int().nonnegative().describe('Bus address, e.g. 0x03000010 (GBA) or 0xC000 (GB)'),
     length: z.number().int().positive().max(4096).default(4),
     as: z.enum(['hex', 'u8', 'u16', 'u32', 's8', 's16', 's32']).default('hex').describe('Interpretation of the bytes'),
   },
   async ({ address, length, as }) => {
     try {
       requireRom();
-      const buf = readMemory(await gba.saveState(), address, length);
+      const buf = await gba.readMemory(address, length);
       const hex = buf.toString('hex').replace(/(..)/g, '$1 ').trim();
       if (as === 'hex') return text(`@0x${address.toString(16)} [${length}B]: ${hex}`);
       const reader = { u8: 'readUInt8', u16: 'readUInt16LE', u32: 'readUInt32LE', s8: 'readInt8', s16: 'readInt16LE', s32: 'readInt32LE' }[as];
@@ -136,7 +134,7 @@ server.tool('reset', 'Reset the current game (soft restart).', {},
   async () => { try { requireRom(); await gba.restart(); return text('Game reset.'); } catch (e) { return errText(e.message); } });
 
 server.tool('status', 'Report whether a ROM is loaded and the current frame.', {},
-  async () => text(gba ? `ROM: ${romName} (${gba.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await gba.frameNum()}, ${states.size} saved states${gba.system === 'gba' ? ', read_memory available' : ', read_memory GBA-only'}.` : 'No ROM loaded.'));
+  async () => text(gba ? `ROM: ${romName} (${gba.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await gba.frameNum()}, ${states.size} saved states.` : 'No ROM loaded.'));
 
 // Clean shutdown.
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { await gba?.close(); } catch {} process.exit(0); });
