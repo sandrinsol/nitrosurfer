@@ -29,7 +29,7 @@ const errText = (s) => ({ content: [{ type: 'text', text: s }], isError: true })
 const BUTTONS = ['A', 'B', 'L', 'R', 'START', 'SELECT', 'UP', 'DOWN', 'LEFT', 'RIGHT'];
 const Button = z.enum(BUTTONS);
 
-const server = new McpServer({ name: 'gba-test-harness', version: '1.0.0' });
+const server = new McpServer({ name: 'gb-gbc-gba-test-mcp', version: '1.0.0' });
 
 server.tool('load_rom', 'Boot a GBA/GB/GBC ROM (.gba/.gb/.gbc) in the headless emulator (replaces any current ROM). The system is auto-detected from the extension. Path is resolved relative to the server\'s working directory.',
   { rom: z.string().describe('Path to the ROM file (.gba, .gb, .gbc, or .zip)') },
@@ -71,8 +71,9 @@ server.tool('screenshot', 'Capture the current frame as a PNG image (returned in
     try {
       requireRom();
       const buf = await gba.screenshot();
+      const d = await gba.videoDimensions();
       return { content: [
-        { type: 'text', text: `Frame ${await gba.frameNum()} of ${romName} (240x160).` },
+        { type: 'text', text: `Frame ${await gba.frameNum()} of ${romName} (${d.w}x${d.h}).` },
         { type: 'image', data: buf.toString('base64'), mimeType: 'image/png' },
       ] };
     } catch (e) { return errText(e.message); }
@@ -171,4 +172,4 @@ for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { awa
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error('gba-test-harness MCP server ready (stdio).');
+console.error('gb-gbc-gba-test-mcp server ready (stdio).');

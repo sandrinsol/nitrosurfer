@@ -1,12 +1,12 @@
 {
-  "name": "gba-test-mcp",
+  "name": "gb-gbc-gba-test-mcp",
   "version": "1.0.0",
   "type": "module",
-  "description": "MCP server + headless harness to test GBA games in the EmulatorJS mgba core: input, screenshots, save states, and real RAM reads — no third-party emulator.",
-  "keywords": ["mcp", "gba", "emulator", "mgba", "emulatorjs", "testing", "ai", "game-testing"],
+  "description": "MCP server + headless harness to test Game Boy / Color / Advance games in EmulatorJS (mgba + gambatte): input, screenshots, save states, deterministic playback, and real RAM read/write — no third-party emulator.",
+  "keywords": ["mcp", "gba", "gb", "gbc", "gameboy", "emulator", "mgba", "gambatte", "emulatorjs", "testing", "ai", "game-testing"],
   "license": "GPL-3.0-or-later",
   "bin": {
-    "gba-test-mcp": "mcp-server.mjs"
+    "gb-gbc-gba-test-mcp": "mcp-server.mjs"
   },
   "scripts": {
     "mcp": "node mcp-server.mjs",

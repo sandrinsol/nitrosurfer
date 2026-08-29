@@ -7,18 +7,18 @@ core automatically from the ROM extension, and exposes it two ways:
 
 - **MCP server** (`mcp-server.mjs`) — any MCP host (Claude Code, Claude Desktop,
   Cursor, …) gets tools to load a ROM, press buttons, **see the screen** (inline
-  images), read real RAM, and assert against golden frames. This is the main way
-  an AI drives it.
+  images), read and write real RAM, and assert against golden frames. This is the
+  main way an AI drives it.
 - **Node library** (`driver.mjs`) — the same capabilities as a scriptable class,
   for CI and custom test scripts.
 
-Everything is **deterministic** (verified bit-identical across runs) and reads
-**real GBA RAM** out of save states — no core rebuild needed.
+Everything is **deterministic** (verified bit-identical across runs) and reads/writes
+**real RAM** out of save states — no core rebuild needed.
 
 ## Setup (once)
 
 ```bash
-cd gba-test-mcp/harness
+cd gb-gbc-gba-test-mcp/harness
 npm install          # installs deps + Chromium (postinstall)
 ```
 
@@ -30,9 +30,9 @@ Claude Code / Claude Desktop config:
 ```json
 {
   "mcpServers": {
-    "gba-test": {
+    "gb-gbc-gba-test": {
       "command": "node",
-      "args": ["/absolute/path/to/gba-test-mcp/harness/mcp-server.mjs"]
+      "args": ["/absolute/path/to/gb-gbc-gba-test-mcp/harness/mcp-server.mjs"]
     }
   }
 }
@@ -46,7 +46,8 @@ working directory.
 
 **Console support:** GBA (mgba) and GB/GBC (gambatte) — everything works for all
 three: input, screenshots, save states, determinism, golden asserts, **and RAM
-reads**. `read_memory` interprets the address for whichever console is loaded.
+read/write**. `read_memory`/`write_memory` interpret the address for whichever
+console is loaded.
 
 ## Quick check
 
