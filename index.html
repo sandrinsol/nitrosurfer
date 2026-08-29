@@ -51,8 +51,8 @@
 
   <div id="picker">
     <label class="btn">
-      Load GBA ROM
-      <input id="rom" type="file" accept=".gba,.zip" hidden />
+      Load ROM
+      <input id="rom" type="file" accept=".gba,.gb,.gbc,.zip" hidden />
     </label>
     <small>Pick a <code>.gba</code> file from your computer to start playing. Runs 100% offline.</small>
   </div>
@@ -72,7 +72,9 @@
       // EmulatorJS configuration — it does all the actual emulation.
       // Everything is served from the local data/ folder: fully offline.
       window.EJS_player = '#game';
-      window.EJS_core = 'gba';
+      // Pick the core by ROM extension: .gb/.gbc -> Game Boy (gambatte), else GBA (mgba).
+      const ext = file.name.split('.').pop().toLowerCase();
+      window.EJS_core = (ext === 'gb' || ext === 'gbc') ? 'gb' : 'gba';
       window.EJS_gameName = file.name.replace(/\.[^.]+$/, '');
       window.EJS_gameUrl = URL.createObjectURL(file);
       window.EJS_pathtodata = 'data/';
