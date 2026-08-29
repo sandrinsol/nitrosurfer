@@ -17,7 +17,7 @@ Everything is **deterministic** (verified bit-identical across runs) and reads
 ## Setup (once)
 
 ```bash
-cd "Emulator Gba/harness"
+cd gba-test-mcp/harness
 npm install          # installs deps + Chromium (postinstall)
 ```
 
@@ -31,7 +31,7 @@ Claude Code / Claude Desktop config:
   "mcpServers": {
     "gba-test": {
       "command": "node",
-      "args": ["/absolute/path/to/Emulator Gba/harness/mcp-server.mjs"]
+      "args": ["/absolute/path/to/gba-test-mcp/harness/mcp-server.mjs"]
     }
   }
 }
@@ -138,7 +138,7 @@ const res = await assertGolden(await gba.screenshot(), 'goldens/title.png', { th
 
 `page.html` configures EmulatorJS headlessly and installs a `window.GBA` bridge
 over `EJS_emulator.gameManager` (the core's control object). `driver.mjs` serves
-the `Emulator Gba` folder over a throwaway localhost server, launches headless
+the repo root folder over a throwaway localhost server, launches headless
 Chromium with SwiftShader (software WebGL2, so no GPU needed), navigates to the
 page, and marshals every call through `page.evaluate`.
 

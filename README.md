@@ -27,7 +27,7 @@ a tiny local web server.
 **Or from a terminal:**
 
 ```bash
-cd "Emulator Gba"
+cd gba-test-mcp
 python3 -m http.server 8000
 # then open http://localhost:8000 in your browser
 ```
@@ -56,12 +56,12 @@ The whole folder is a static site — no build step. A `netlify.toml` is include
 
 **Drag-and-drop (easiest):**
 1. Go to <https://app.netlify.com/drop>.
-2. Drag the **`Emulator Gba`** folder onto the page.
+2. Drag the **`gba-test-mcp`** folder onto the page.
 3. Netlify gives you a live URL. Done.
 
 **Netlify CLI:**
 ```bash
-cd "Emulator Gba"
+cd gba-test-mcp
 npx netlify-cli deploy --prod
 ```
 
