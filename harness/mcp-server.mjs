@@ -167,6 +167,57 @@ server.tool('reset', 'Reset the current game (soft restart).', {},
 server.tool('status', 'Report whether a ROM is loaded and the current frame.', {},
   async () => text(gba ? `ROM: ${romName} (${gba.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await gba.frameNum()}, ${states.size} saved states.` : 'No ROM loaded.'));
 
+// ---- Prompts: reusable workflows that orchestrate the tools above ----
+const userMsg = (t) => ({ messages: [{ role: 'user', content: { type: 'text', text: t } }] });
+
+server.prompt('smoke_test_rom', 'Boot a ROM and check it actually runs (renders, does not crash or hang).',
+  { rom: z.string().describe('Path to the .gba/.gb/.gbc ROM'), frames: z.string().optional().describe('Frames to run before judging (default 300)') },
+  ({ rom, frames }) => userMsg(
+`Smoke-test the ROM at "${rom}" and tell me if it runs.
+
+1. Call load_rom with rom="${rom}". If it errors, report the error and stop.
+2. Call wait_frames with frames=${frames || 300} to get past boot.
+3. Call screenshot and look at the returned image.
+4. Judge: does it show real game content, or is it black/blank/garbled/frozen?
+   Cross-check with frame_number (it should have advanced).
+
+Report PASS (it boots and renders) or FAIL (with what you saw), and include the screenshot.`));
+
+server.prompt('regression_check', 'Play a scripted sequence and compare frames to saved golden images.',
+  { rom: z.string().describe('Path to the ROM'), steps: z.string().describe('Plain-language sequence of inputs and where to check, e.g. "press START, wait 120, then check the title screen"') },
+  ({ rom, steps }) => userMsg(
+`Run a visual regression check on "${rom}".
+
+Sequence to perform: ${steps}
+
+1. load_rom with rom="${rom}".
+2. Execute the sequence using wait_frames / press / set_button. Advance time only
+   with wait_frames (never real-time sleeps) so the run is deterministic.
+3. At each checkpoint, call assert_golden with a stable golden path like
+   "goldens/<checkpoint>.png". The FIRST run creates the baselines; later runs compare.
+4. Report each checkpoint PASS/FAIL with the percent differing; on FAIL, mention the
+   diff image path so I can inspect it.
+
+If this is the first run, say that you created the baselines and ask me to confirm they look correct.`));
+
+server.prompt('find_ram_address', 'Discover the RAM address of an in-game value (HP, score, coins…) by value-search, then verify it.',
+  { rom: z.string().describe('Path to the ROM'), variable: z.string().describe('What to find, e.g. "player HP" or "coin count"'), region: z.string().optional().describe('Optional region hint: GBA "iwram"/"ewram", GB "wram"') },
+  ({ rom, variable, region }) => userMsg(
+`Find the RAM address of "${variable}" in "${rom}" by classic value search.
+
+1. load_rom, then play (press/wait_frames) to a point where you can see the current
+   value of "${variable}" on screen.
+2. save_state (id="a") and note the on-screen value V1.
+3. Read the candidate RAM${region ? ` (focus on ${region})` : ''} with read_memory across the
+   relevant region in chunks, recording bytes that equal V1 (try u8 and u16).
+4. Change the value in-game (take damage, collect a coin, etc.) to V2, save_state (id="b").
+5. Re-read and keep only addresses whose value changed from V1 to V2 accordingly.
+   Repeat steps 4–5 until one address (or a tiny set) remains.
+6. VERIFY: write_memory a known value to the candidate, then confirm the game/screen
+   reflects it. Report the confirmed address, width, and how you verified it.
+
+Advance time only with wait_frames so results are reproducible.`));
+
 // Clean shutdown.
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { await gba?.close(); } catch {} process.exit(0); });
 

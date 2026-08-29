@@ -49,6 +49,15 @@ three: input, screenshots, save states, determinism, golden asserts, **and RAM
 read/write**. `read_memory`/`write_memory` interpret the address for whichever
 console is loaded.
 
+**Prompts (guided workflows).** The server also ships MCP *prompts* — pick one in
+your host and it walks the agent through a multi-step job using the tools:
+- `smoke_test_rom` — boot a ROM and judge whether it actually runs (renders vs.
+  black/crash/hang).
+- `regression_check` — play a scripted sequence and `assert_golden` at checkpoints.
+- `find_ram_address` — value-search to discover the address of an in-game value
+  (HP, score…), then verify it with a write — turns the memory tools from "if you
+  know the address" into "find it yourself".
+
 ## Quick check
 
 ```bash
