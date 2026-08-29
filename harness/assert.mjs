@@ -1,4 +1,4 @@
-// Golden-frame comparison helpers for GBA screenshots.
+// Golden-frame comparison helpers for emulator screenshots.
 //
 //   import { compare, assertGolden } from './assert.mjs';
 //

@@ -5,7 +5,7 @@
 //
 // Exit code 0 = pass, 1 = fail. Uses no assert framework so it runs anywhere.
 
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 import zlib from 'node:zlib';
 
 function fail(msg) { console.error('FAIL:', msg); process.exit(1); }
@@ -45,7 +45,7 @@ function nonBlackFraction(png) {
   return total ? nonBlack / total : 0;
 }
 
-const gba = await GBAHarness.launch('../anguna.gba');
+const gba = await EmuHarness.launch('../anguna.gba');
 try {
   const dims = await gba.videoDimensions();
   if (dims.w !== 240 || dims.h !== 160) fail(`unexpected GBA video dimensions: ${JSON.stringify(dims)}`);

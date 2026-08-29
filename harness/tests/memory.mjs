@@ -3,7 +3,7 @@
 //
 //   node tests/memory.mjs   (exit 0 = pass, 1 = fail)
 
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 import { parseState, readU32 } from '../memory.mjs';
 
 let failed = 0;
@@ -12,7 +12,7 @@ const ok = (name, cond, detail) => {
   if (!cond) failed++;
 };
 
-const gba = await GBAHarness.launch('../anguna.gba');
+const gba = await EmuHarness.launch('../anguna.gba');
 try {
   await gba.waitFrames(300);
   const s1 = await gba.saveState();

@@ -1,4 +1,4 @@
-# GBA Emulator + AI Test Harness (fully offline)
+# Game Boy Emulator + AI Test Harness (GB / GBC / GBA, fully offline)
 
 A dead-simple browser-based Game Boy Advance emulator. Everything it needs is
 bundled in the `data/` folder — **no internet connection required**, ever.
@@ -32,7 +32,7 @@ python3 -m http.server 8000
 # then open http://localhost:8000 in your browser
 ```
 
-Then click **Load GBA ROM** and pick a `.gba` file.
+Then click **Load ROM** and pick a `.gba`, `.gb`, or `.gbc` file.
 
 A free homebrew game, **`anguna.gba`**, is included so you can try it right away.
 Delete it if you don't want it — you can load any `.gba` ROM.

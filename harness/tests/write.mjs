@@ -10,7 +10,7 @@
 
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 import * as gbaMem from '../memory.mjs';
 import * as gbMem from '../gb-memory.mjs';
 
@@ -22,7 +22,7 @@ const ok = (name, cond, detail) => {
 
 // --- GBA: pure-function write offset correctness ---
 {
-  const gba = await GBAHarness.launch('../anguna.gba', { timeout: 30000 });
+  const gba = await EmuHarness.launch('../anguna.gba', { timeout: 30000 });
   try {
     await gba.waitFrames(120);
     const s = await gba.saveState();
@@ -45,7 +45,7 @@ const ok = (name, cond, detail) => {
   const romPath = path.resolve('out', 'write.gb');
   await writeFile(romPath, rom);
 
-  const gba = await GBAHarness.launch(romPath, { timeout: 30000 });
+  const gba = await EmuHarness.launch(romPath, { timeout: 30000 });
   try {
     await gba.waitFrames(30);
 

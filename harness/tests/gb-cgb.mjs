@@ -8,7 +8,7 @@
 
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 
 let failed = 0;
 const ok = (name, cond, detail) => {
@@ -42,7 +42,7 @@ await mkdir(path.resolve('out'), { recursive: true });
 const romPath = path.resolve('out', 'cgbbank.gbc');
 await writeFile(romPath, makeCgbRom());
 
-const gba = await GBAHarness.launch(romPath, { timeout: 30000 });
+const gba = await EmuHarness.launch(romPath, { timeout: 30000 });
 try {
   await gba.waitFrames(30);
 

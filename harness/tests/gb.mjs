@@ -1,12 +1,12 @@
 // GB/GBC support: boot a minimal Game Boy ROM (generated here, no binary checked
 // in) via the gambatte core, and confirm input/screenshot/state work and that
-// read_memory is cleanly gated to GBA.
+// read_memory works (GB uses the gambatte save-state parser).
 //
 //   node tests/gb.mjs   (exit 0 = pass, 1 = fail)
 
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 
 let failed = 0;
 const ok = (name, cond, detail) => {
@@ -30,7 +30,7 @@ await mkdir(path.resolve('out'), { recursive: true });
 const romPath = path.resolve('out', 'testrom.gb');
 await writeFile(romPath, makeGbRom());
 
-const gba = await GBAHarness.launch(romPath, { timeout: 30000 });
+const gba = await EmuHarness.launch(romPath, { timeout: 30000 });
 try {
   ok('detected system is GB', gba.system === 'gb', gba.system);
 

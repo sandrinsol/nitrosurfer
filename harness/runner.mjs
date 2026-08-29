@@ -23,7 +23,7 @@
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { GBAHarness } from './driver.mjs';
+import { EmuHarness } from './driver.mjs';
 import { assertGolden } from './assert.mjs';
 
 const scriptPath = process.argv[2];
@@ -38,7 +38,7 @@ const outDir = path.resolve(
 );
 await mkdir(outDir, { recursive: true });
 
-const gba = await GBAHarness.launch(script.rom);
+const gba = await EmuHarness.launch(script.rom);
 const timeline = [];
 const states = new Map();
 let seq = 0;

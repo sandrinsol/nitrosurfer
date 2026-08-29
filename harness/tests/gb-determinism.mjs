@@ -6,7 +6,7 @@
 
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { GBAHarness } from '../driver.mjs';
+import { EmuHarness } from '../driver.mjs';
 import { compare } from '../assert.mjs';
 
 let failed = 0;
@@ -47,7 +47,7 @@ await writeFile(romPath, makeInteractiveGbRom());
 
 // One scripted run: idle snapshot, then hold A, capturing RAM + frames.
 async function run() {
-  const gba = await GBAHarness.launch(romPath, { timeout: 30000 });
+  const gba = await EmuHarness.launch(romPath, { timeout: 30000 });
   await gba.waitFrames(60);
   const idleMem = await gba.readU8(0xc000);
   const idleShot = await gba.screenshot();

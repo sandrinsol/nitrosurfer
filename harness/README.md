@@ -1,4 +1,4 @@
-# GBA Test Harness + MCP Server
+# Game Boy Test Harness + MCP Server (GB / GBC / GBA)
 
 Test **GBA / GB / GBC** games with an AI agent — **no third-party emulator**. It
 drives the bundled EmulatorJS cores (**mgba** for GBA, **gambatte** for GB/GBC —
@@ -68,21 +68,21 @@ node tests/smoke.mjs                                    # full self-test (boot +
 ## Writing a test
 
 ```js
-import { GBAHarness } from './driver.mjs';
+import { EmuHarness } from './driver.mjs';
 
-const gba = await GBAHarness.launch('../mygame.gba'); // waits until the game has started
-await gba.waitFrames(180);        // let it boot
-await gba.tap('START');           // press+release START
-await gba.setButton('RIGHT', true);
-await gba.waitFrames(60);         // hold RIGHT for 60 frames
-await gba.setButton('RIGHT', false);
-await gba.screenshot('out/after-move.png');
+const emu = await EmuHarness.launch('../mygame.gba'); // waits until the game has started
+await emu.waitFrames(180);        // let it boot
+await emu.tap('START');           // press+release START
+await emu.setButton('RIGHT', true);
+await emu.waitFrames(60);         // hold RIGHT for 60 frames
+await emu.setButton('RIGHT', false);
+await emu.screenshot('out/after-move.png');
 
-const save = await gba.saveState();   // Buffer — snapshot the whole machine
+const save = await emu.saveState();   // Buffer — snapshot the whole machine
 // ... do stuff ...
-await gba.loadState(save);            // restore exactly
+await emu.loadState(save);            // restore exactly
 
-await gba.close();
+await emu.close();
 ```
 
 `launch(rom)` accepts any path; ROMs outside this folder are copied into `out/` so
@@ -92,7 +92,7 @@ the local static server can serve them.
 
 | Method | Description |
 |--------|-------------|
-| `GBAHarness.launch(rom, {headless=true, timeout=60000})` | Boot a ROM, resolve once the game has started. |
+| `EmuHarness.launch(rom, {headless=true, timeout=60000})` | Boot a ROM, resolve once the game has started. |
 | `waitFrames(n)` | Advance **n emulated frames** on a boot-anchored absolute clock (see Determinism). |
 | `waitUntilFrame(abs)` | Advance to an absolute emulated frame number. |
 | `frameNum()` | Current emulated frame number (absolute, from boot). |
@@ -106,7 +106,7 @@ the local static server can serve them.
 | `writeMemory(addr, buf)` | Set-up poke: patch RAM via save state (see caveats below). |
 | `writeU8/writeU16/writeU32(addr, v)` | Write a little-endian integer at a bus address. |
 | `hasMemoryAccess()` | `true` only if the core exports *live* RAM (not required for reads). |
-| `videoDimensions()` | `{ w, h }` — `240x160` for GBA. |
+| `videoDimensions()` | `{ w, h }` — `240x160` (GBA) or `160x144` (GB/GBC). |
 | `restart()` | Reset the game. |
 | `close()` | Shut down the browser and static server. |
 
@@ -143,7 +143,7 @@ golden and writes a red-highlighted `*.diff.png` on mismatch.
 
 ```js
 import { compare, assertGolden } from './assert.mjs';
-const res = await assertGolden(await gba.screenshot(), 'goldens/title.png', { threshold: 0.02 });
+const res = await assertGolden(await emu.screenshot(), 'goldens/title.png', { threshold: 0.02 });
 // res.pass, res.fraction, res.diffPath
 ```
 
@@ -154,7 +154,7 @@ const res = await assertGolden(await gba.screenshot(), 'goldens/title.png', { th
 
 ## How it works
 
-`page.html` configures EmulatorJS headlessly and installs a `window.GBA` bridge
+`page.html` configures EmulatorJS headlessly and installs a `window.Emu` bridge
 over `EJS_emulator.gameManager` (the core's control object). `driver.mjs` serves
 the repo root folder over a throwaway localhost server, launches headless
 Chromium with SwiftShader (software WebGL2, so no GPU needed), navigates to the
@@ -179,14 +179,14 @@ Assert on actual game variables (HP, score, position, flags, RNG…) by address:
 
 ```js
 // GBA
-const hp  = await gba.readU16(0x03000010);        // IWRAM
-const buf = await gba.readMemory(0x02000000, 64); // 64 bytes of EWRAM
-const r   = await gba.readRegions();              // { ewram, iwram, vram, pram, oam, io }
+const hp  = await emu.readU16(0x03000010);        // IWRAM
+const buf = await emu.readMemory(0x02000000, 64); // 64 bytes of EWRAM
+const r   = await emu.readRegions();              // { ewram, iwram, vram, pram, oam, io }
 
 // GB/GBC (addresses interpreted for the loaded console)
-const w   = await gba.readU8(0xC000);             // WRAM
-const io  = await gba.readU8(0xFF40);             // LCDC
-const rg  = await gba.readRegions();              // { wram, vram, sram, hram, io }
+const w   = await emu.readU8(0xC000);             // WRAM
+const io  = await emu.readU8(0xFF40);             // LCDC
+const rg  = await emu.readRegions();              // { wram, vram, sram, hram, io }
 ```
 
 Or via the MCP `read_memory` tool (`address`, `length`, `as: hex|u8|u16|u32|s8|s16|s32`).
@@ -206,8 +206,8 @@ Both compute offsets per state, so nothing is hardcoded per ROM or save type.
 Set up a scenario without playing to it — e.g. start a test at low HP:
 
 ```js
-await gba.writeU8(0x03000010, 1);                 // GBA IWRAM
-await gba.writeMemory(0xC000, Buffer.from([1,2])); // GB WRAM
+await emu.writeU8(0x03000010, 1);                 // GBA IWRAM
+await emu.writeMemory(0xC000, Buffer.from([1,2])); // GB WRAM
 ```
 
 Or the MCP `write_memory` tool (`address` + `value`/`as`, or raw `hex`).

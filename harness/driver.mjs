@@ -1,19 +1,19 @@
-// GBA test harness driver.
+// Game Boy (GB/GBC/GBA) test harness driver.
 //
-// Boots the bundled EmulatorJS mgba core in headless Chromium and exposes an
-// mGBA-scripting-style API (buttons, frame stepping, screenshots, save states)
-// so AI/CI can test GBA ROMs with no third-party emulator program.
+// Boots the bundled EmulatorJS cores (mgba for GBA, gambatte for GB/GBC) in
+// headless Chromium and exposes a scripting-style API (buttons, frame stepping,
+// screenshots, save states, RAM) so AI/CI can test ROMs with no third-party emulator.
 //
 // Usage as a library:
-//   import { GBAHarness } from './driver.mjs';
-//   const gba = await GBAHarness.launch('../anguna.gba');
-//   await gba.waitFrames(300);
-//   await gba.tap('START');
-//   await gba.screenshot('out/title.png');
-//   await gba.close();
+//   import { EmuHarness } from './driver.mjs';
+//   const emu = await EmuHarness.launch('../anguna.gba');
+//   await emu.waitFrames(300);
+//   await emu.tap('START');
+//   await emu.screenshot('out/title.png');
+//   await emu.close();
 //
 // Usage as a CLI (quick smoke shot):
-//   node driver.mjs shot <rom.gba> [frames=300] [out.png=out/shot.png]
+//   node driver.mjs shot <rom> [frames=300] [out.png=out/shot.png]
 
 import http from 'node:http';
 import { readFile, writeFile, stat, unlink, mkdir } from 'node:fs/promises';
@@ -24,7 +24,7 @@ import * as gbaMem from './memory.mjs';
 import * as gbMem from './gb-memory.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..'); // the "Emulator Gba" folder
+const ROOT = path.resolve(__dirname, '..'); // the repo root (served to the browser)
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -52,7 +52,7 @@ function startServer(rootDir) {
   });
 }
 
-export class GBAHarness {
+export class EmuHarness {
   constructor({ browser, context, page, server, tempRom, system }) {
     this.browser = browser; this.context = context; this.page = page; this.server = server;
     this._tempRom = tempRom; // copied-in ROM to clean up on close (if any)
@@ -97,7 +97,7 @@ export class GBAHarness {
       await page.waitForFunction(() => window.EJS_emulator && window.EJS_emulator.gameManager, { timeout });
       // Bound the wait for the 'start' event so a ROM that never boots fails fast.
       await page.evaluate((ms) => Promise.race([
-        window.GBA.ready(),
+        window.Emu.ready(),
         new Promise((_, rej) => setTimeout(() => rej(new Error('game did not start (ROM may be unsupported by this core)')), ms)),
       ]), timeout);
     } catch (e) {
@@ -106,20 +106,20 @@ export class GBAHarness {
       throw new Error(`Emulator failed to start${errors.length ? ` (page errors: ${errors.join('; ')})` : ''}: ${e.message}`);
     }
 
-    const system = await page.evaluate(() => window.GBA.system);
-    return new GBAHarness({ browser, context, page, server, tempRom, system });
+    const system = await page.evaluate(() => window.Emu.system);
+    return new EmuHarness({ browser, context, page, server, tempRom, system });
   }
 
-  frameNum() { return this.page.evaluate(() => window.GBA.frameNum()); }
-  videoDimensions() { return this.page.evaluate(() => window.GBA.videoDimensions()); }
-  waitFrames(n) { return this.page.evaluate((n) => window.GBA.waitFrames(n), n); }
-  waitUntilFrame(abs) { return this.page.evaluate((a) => window.GBA.waitUntilFrame(a), abs); }
-  setButton(name, pressed) { return this.page.evaluate(([n, p]) => window.GBA.setButton(n, p), [name, pressed]); }
-  tap(name, hold = 4, release = 4) { return this.page.evaluate(([n, h, r]) => window.GBA.tap(n, h, r), [name, hold, release]); }
-  restart() { return this.page.evaluate(() => window.GBA.restart()); }
+  frameNum() { return this.page.evaluate(() => window.Emu.frameNum()); }
+  videoDimensions() { return this.page.evaluate(() => window.Emu.videoDimensions()); }
+  waitFrames(n) { return this.page.evaluate((n) => window.Emu.waitFrames(n), n); }
+  waitUntilFrame(abs) { return this.page.evaluate((a) => window.Emu.waitUntilFrame(a), abs); }
+  setButton(name, pressed) { return this.page.evaluate(([n, p]) => window.Emu.setButton(n, p), [name, pressed]); }
+  tap(name, hold = 4, release = 4) { return this.page.evaluate(([n, h, r]) => window.Emu.tap(n, h, r), [name, hold, release]); }
+  restart() { return this.page.evaluate(() => window.Emu.restart()); }
 
   async screenshot(outPath) {
-    const b64 = await this.page.evaluate(() => window.GBA.screenshot());
+    const b64 = await this.page.evaluate(() => window.Emu.screenshot());
     const buf = Buffer.from(b64, 'base64');
     if (outPath) {
       const abs = path.resolve(process.cwd(), outPath);
@@ -130,19 +130,19 @@ export class GBAHarness {
   }
 
   async saveState() {
-    const b64 = await this.page.evaluate(() => window.GBA.saveState());
+    const b64 = await this.page.evaluate(() => window.Emu.saveState());
     return Buffer.from(b64, 'base64');
   }
   async loadState(buf) {
     const b64 = Buffer.from(buf).toString('base64');
-    await this.page.evaluate((b) => window.GBA.loadState(b), b64);
+    await this.page.evaluate((b) => window.Emu.loadState(b), b64);
   }
 
   /** Whether the loaded core exposes live RAM exports (bundled mgba core does not;
    *  memory reads instead go through save-state parsing, which always works). */
-  hasMemoryAccess() { return this.page.evaluate(() => window.GBA.hasMemoryAccess()); }
+  hasMemoryAccess() { return this.page.evaluate(() => window.Emu.hasMemoryAccess()); }
   async readSystemRam() {
-    const r = await this.page.evaluate(() => window.GBA.readSystemRam());
+    const r = await this.page.evaluate(() => window.Emu.readSystemRam());
     return r ? Buffer.from(r.base64, 'base64') : null;
   }
 
@@ -192,14 +192,14 @@ export class GBAHarness {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [cmd, rom, framesArg, outArg] = process.argv.slice(2);
   if (cmd !== 'shot' || !rom) {
-    console.error('Usage: node driver.mjs shot <rom.gba> [frames=300] [out.png=out/shot.png]');
+    console.error('Usage: node driver.mjs shot <rom> [frames=300] [out.png=out/shot.png]');
     process.exit(1);
   }
   const frames = Number(framesArg || 300);
   const out = outArg || 'out/shot.png';
-  const gba = await GBAHarness.launch(rom);
-  await gba.waitFrames(frames);
-  await gba.screenshot(out);
-  console.log(`Ran ${frames} frames of ${rom}; screenshot -> ${out} (frame ${await gba.frameNum()})`);
-  await gba.close();
+  const emu = await EmuHarness.launch(rom);
+  await emu.waitFrames(frames);
+  await emu.screenshot(out);
+  console.log(`Ran ${frames} frames of ${rom}; screenshot -> ${out} (frame ${await emu.frameNum()})`);
+  await emu.close();
 }

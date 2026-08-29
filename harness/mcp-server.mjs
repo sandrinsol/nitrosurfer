@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// GBA test harness as an MCP server.
+// Game Boy (GB/GBC/GBA) test harness as an MCP server.
 //
 // Exposes the emulator to any MCP host (Claude Code, Claude Desktop, Cursor, ...)
-// as tools an AI agent can call to test GBA games it builds — no third-party
-// emulator program. screenshot returns the frame as an inline image so the agent
-// literally sees the game; read_memory reads real RAM out of a save state.
+// as tools an AI agent can call to test the GB/GBC/GBA games it builds — no
+// third-party emulator program. screenshot returns the frame as an inline image so
+// the agent literally sees the game; read_memory reads real RAM out of a save state.
 //
 // Run: node mcp-server.mjs   (stdio transport)
 
@@ -12,16 +12,16 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import path from 'node:path';
-import { GBAHarness } from './driver.mjs';
+import { EmuHarness } from './driver.mjs';
 import { assertGolden } from './assert.mjs';
 
 // ---- Emulator session (one ROM at a time) ----
-let gba = null;
+let emu = null;
 let romName = null;
 const states = new Map(); // id -> Buffer (save states)
 
 function requireRom() {
-  if (!gba) throw new Error('No ROM loaded. Call load_rom first.');
+  if (!emu) throw new Error('No ROM loaded. Call load_rom first.');
 }
 const text = (s) => ({ content: [{ type: 'text', text: s }] });
 const errText = (s) => ({ content: [{ type: 'text', text: s }], isError: true });
@@ -35,33 +35,33 @@ server.tool('load_rom', 'Boot a GBA/GB/GBC ROM (.gba/.gb/.gbc) in the headless e
   { rom: z.string().describe('Path to the ROM file (.gba, .gb, .gbc, or .zip)') },
   async ({ rom }) => {
     try {
-      if (gba) { await gba.close().catch(() => {}); gba = null; states.clear(); }
-      gba = await GBAHarness.launch(rom);
+      if (emu) { await emu.close().catch(() => {}); emu = null; states.clear(); }
+      emu = await EmuHarness.launch(rom);
       romName = path.basename(rom);
-      const dims = await gba.videoDimensions();
-      const sys = gba.system === 'gb' ? 'GB/GBC' : 'GBA';
-      return text(`Loaded ${romName} as ${sys}. Video ${dims.w}x${dims.h}. Started at frame ${await gba.frameNum()}.`);
-    } catch (e) { gba = null; return errText(`load_rom failed: ${e.message}`); }
+      const dims = await emu.videoDimensions();
+      const sys = emu.system === 'gb' ? 'GB/GBC' : 'GBA';
+      return text(`Loaded ${romName} as ${sys}. Video ${dims.w}x${dims.h}. Started at frame ${await emu.frameNum()}.`);
+    } catch (e) { emu = null; return errText(`load_rom failed: ${e.message}`); }
   });
 
 server.tool('wait_frames', 'Advance the emulator by N emulated frames (deterministic; ~60 frames = 1 second).',
   { frames: z.number().int().positive().describe('Number of emulated frames to advance') },
   async ({ frames }) => {
-    try { requireRom(); await gba.waitFrames(frames); return text(`Advanced to frame ${await gba.frameNum()}.`); }
+    try { requireRom(); await emu.waitFrames(frames); return text(`Advanced to frame ${await emu.frameNum()}.`); }
     catch (e) { return errText(e.message); }
   });
 
 server.tool('press', 'Press a button: hold it for `hold` frames, then release and settle for `release` frames.',
   { button: Button, hold: z.number().int().positive().default(4), release: z.number().int().nonnegative().default(4) },
   async ({ button, hold, release }) => {
-    try { requireRom(); await gba.tap(button, hold, release); return text(`Pressed ${button} (hold ${hold}f). Now at frame ${await gba.frameNum()}.`); }
+    try { requireRom(); await emu.tap(button, hold, release); return text(`Pressed ${button} (hold ${hold}f). Now at frame ${await emu.frameNum()}.`); }
     catch (e) { return errText(e.message); }
   });
 
 server.tool('set_button', 'Hold or release a button without waiting (for combos / precise timing). Follow with wait_frames.',
   { button: Button, pressed: z.boolean() },
   async ({ button, pressed }) => {
-    try { requireRom(); await gba.setButton(button, pressed); return text(`${button} ${pressed ? 'held' : 'released'}.`); }
+    try { requireRom(); await emu.setButton(button, pressed); return text(`${button} ${pressed ? 'held' : 'released'}.`); }
     catch (e) { return errText(e.message); }
   });
 
@@ -70,10 +70,10 @@ server.tool('screenshot', 'Capture the current frame as a PNG image (returned in
   async () => {
     try {
       requireRom();
-      const buf = await gba.screenshot();
-      const d = await gba.videoDimensions();
+      const buf = await emu.screenshot();
+      const d = await emu.videoDimensions();
       return { content: [
-        { type: 'text', text: `Frame ${await gba.frameNum()} of ${romName} (${d.w}x${d.h}).` },
+        { type: 'text', text: `Frame ${await emu.frameNum()} of ${romName} (${d.w}x${d.h}).` },
         { type: 'image', data: buf.toString('base64'), mimeType: 'image/png' },
       ] };
     } catch (e) { return errText(e.message); }
@@ -88,7 +88,7 @@ server.tool('read_memory', 'Read RAM at a bus address, reflecting the current fr
   async ({ address, length, as }) => {
     try {
       requireRom();
-      const buf = await gba.readMemory(address, length);
+      const buf = await emu.readMemory(address, length);
       const hex = buf.toString('hex').replace(/(..)/g, '$1 ').trim();
       if (as === 'hex') return text(`@0x${address.toString(16)} [${length}B]: ${hex}`);
       const reader = { u8: 'readUInt8', u16: 'readUInt16LE', u32: 'readUInt32LE', s8: 'readInt8', s16: 'readInt16LE', s32: 'readInt32LE' }[as];
@@ -121,8 +121,8 @@ server.tool('write_memory', 'Write RAM at a bus address to SET UP state (e.g. HP
       } else {
         return errText('provide `value` (with `as`) or `hex`');
       }
-      await gba.writeMemory(address, bytes);
-      const back = await gba.readMemory(address, bytes.length);
+      await emu.writeMemory(address, bytes);
+      const back = await emu.readMemory(address, bytes.length);
       return text(`Wrote ${bytes.length}B @0x${address.toString(16)}; read back: ${back.toString('hex').replace(/(..)/g, '$1 ').trim()}`);
     } catch (e) { return errText(e.message); }
   });
@@ -130,14 +130,14 @@ server.tool('write_memory', 'Write RAM at a bus address to SET UP state (e.g. HP
 server.tool('save_state', 'Snapshot the full machine state under a name you can restore later.',
   { id: z.string().default('default') },
   async ({ id }) => {
-    try { requireRom(); states.set(id, await gba.saveState()); return text(`Saved state "${id}" (${states.get(id).length} bytes).`); }
+    try { requireRom(); states.set(id, await emu.saveState()); return text(`Saved state "${id}" (${states.get(id).length} bytes).`); }
     catch (e) { return errText(e.message); }
   });
 
 server.tool('load_state', 'Restore a previously saved state by name.',
   { id: z.string().default('default') },
   async ({ id }) => {
-    try { requireRom(); const st = states.get(id); if (!st) return errText(`No saved state "${id}".`); await gba.loadState(st); return text(`Restored state "${id}". Frame ${await gba.frameNum()}.`); }
+    try { requireRom(); const st = states.get(id); if (!st) return errText(`No saved state "${id}".`); await emu.loadState(st); return text(`Restored state "${id}". Frame ${await emu.frameNum()}.`); }
     catch (e) { return errText(e.message); }
   });
 
@@ -149,7 +149,7 @@ server.tool('assert_golden', 'Compare the current frame to a stored golden PNG (
   async ({ golden, threshold }) => {
     try {
       requireRom();
-      const res = await assertGolden(await gba.screenshot(), golden, { threshold });
+      const res = await assertGolden(await emu.screenshot(), golden, { threshold });
       if (res.created) return text(`Golden created at ${res.goldenPath} (baseline saved).`);
       const pct = (res.fraction * 100).toFixed(2);
       return res.pass
@@ -159,13 +159,13 @@ server.tool('assert_golden', 'Compare the current frame to a stored golden PNG (
   });
 
 server.tool('frame_number', 'Get the current emulated frame number.', {},
-  async () => { try { requireRom(); return text(String(await gba.frameNum())); } catch (e) { return errText(e.message); } });
+  async () => { try { requireRom(); return text(String(await emu.frameNum())); } catch (e) { return errText(e.message); } });
 
 server.tool('reset', 'Reset the current game (soft restart).', {},
-  async () => { try { requireRom(); await gba.restart(); return text('Game reset.'); } catch (e) { return errText(e.message); } });
+  async () => { try { requireRom(); await emu.restart(); return text('Game reset.'); } catch (e) { return errText(e.message); } });
 
 server.tool('status', 'Report whether a ROM is loaded and the current frame.', {},
-  async () => text(gba ? `ROM: ${romName} (${gba.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await gba.frameNum()}, ${states.size} saved states.` : 'No ROM loaded.'));
+  async () => text(emu ? `ROM: ${romName} (${emu.system === 'gb' ? 'GB/GBC' : 'GBA'}), frame ${await emu.frameNum()}, ${states.size} saved states.` : 'No ROM loaded.'));
 
 // ---- Prompts: reusable workflows that orchestrate the tools above ----
 const userMsg = (t) => ({ messages: [{ role: 'user', content: { type: 'text', text: t } }] });
@@ -219,7 +219,7 @@ server.prompt('find_ram_address', 'Discover the RAM address of an in-game value 
 Advance time only with wait_frames so results are reproducible.`));
 
 // Clean shutdown.
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { await gba?.close(); } catch {} process.exit(0); });
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, async () => { try { await emu?.close(); } catch {} process.exit(0); });
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
