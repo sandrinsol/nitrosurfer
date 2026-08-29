@@ -1,5 +1,5 @@
 node_modules/
 out/
-tests/goldens/*.diff.png
+tests/goldens/
 *.log
 .DS_Store
