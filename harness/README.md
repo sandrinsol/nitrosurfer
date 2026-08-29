@@ -24,8 +24,38 @@ npm install          # installs deps + Chromium (postinstall)
 
 ## Use as an MCP server
 
-Run it: `npm run mcp` (stdio transport). Register it with your MCP host — e.g.
-Claude Code / Claude Desktop config:
+It runs over **stdio** (`npm run mcp`), so any MCP host launches it with
+`command: "node"` and the absolute path to `mcp-server.mjs`. Requires Node 18+; the
+first `npm install` downloads headless Chromium. ROM paths in tool calls resolve
+relative to the server's working directory (`harness/`), so absolute ROM paths are
+safest.
+
+> **Config key differs by host:** VS Code uses `"servers"`; Claude Desktop, Cursor,
+> Windsurf, and Antigravity use `"mcpServers"`. The inner server entry is identical.
+
+### VS Code (Copilot agent mode, 1.102+)
+
+Copy [`.vscode/mcp.json.example`](../.vscode/mcp.json.example) to `.vscode/mcp.json`
+in your workspace and set the path:
+
+```json
+{
+  "servers": {
+    "gb-gbc-gba-test": {
+      "command": "node",
+      "args": ["/absolute/path/to/gb-gbc-gba-test-mcp/harness/mcp-server.mjs"]
+    }
+  }
+}
+```
+
+Or: Command Palette → **MCP: Add Server → Command (stdio)**, enter `node` and the
+path. Then open **Copilot Chat → Agent mode**; the tools and prompts appear.
+
+### Antigravity IDE
+
+Open the MCP settings (Settings → **MCP servers** / “Manage MCP servers”) and add a
+stdio server with the same entry, under the `mcpServers` key:
 
 ```json
 {
@@ -38,7 +68,18 @@ Claude Code / Claude Desktop config:
 }
 ```
 
-Then the agent has these tools: `load_rom` (`.gba/.gb/.gbc`, system auto-detected),
+Then use it from Antigravity's agent/chat. (The exact menu label can vary by
+version — look for “MCP”; the server entry above is what matters.)
+
+### Claude Desktop / Cursor / Windsurf / Claude Code
+
+Same `mcpServers` entry as the Antigravity block above, added to that host's MCP
+config (e.g. Claude Desktop's `claude_desktop_config.json`, or `claude mcp add` for
+Claude Code).
+
+### Tools & prompts
+
+Once connected, the agent has these tools: `load_rom` (`.gba/.gb/.gbc`, system auto-detected),
 `wait_frames`, `press`, `set_button`, `screenshot` (returns the frame as an image),
 `read_memory`, `write_memory`, `save_state`, `load_state`, `assert_golden`,
 `frame_number`, `reset`, `status`. ROM paths are resolved relative to the server's

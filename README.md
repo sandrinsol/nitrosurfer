@@ -12,6 +12,11 @@ Two ways to use it:
   assert against golden frames. No third-party emulator. See
   [harness/README.md](harness/README.md).
 
+**Use it in your editor** — VS Code (Copilot agent mode), Antigravity, Cursor,
+Windsurf, Claude Desktop/Code, or any MCP host. Setup for each is in
+[harness/README.md → Use as an MCP server](harness/README.md#use-as-an-mcp-server);
+a ready-to-edit VS Code config is at [`.vscode/mcp.json.example`](.vscode/mcp.json.example).
+
 **License:** GPL-3.0-or-later (this repo bundles EmulatorJS, which is GPL-3.0). See
 `LICENSE` and `NOTICE.md`. Only the freeware `anguna.gba` is included — don't commit
 commercial ROMs.
