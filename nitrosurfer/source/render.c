@@ -1333,7 +1333,7 @@ void render_start_screen(void) {
     }
 
     // Bottom Metallic Box: Accumulated coins display (Rows 17..19, Y in [136, 159])
-    sprintf(buf, "#{P:20,144}#{ci:3}COINS ACCUMULATED: #{ci:1}%06d\n", g_game.total_coins);
+    sprintf(buf, "#{P:20,144}#{ci:3}COINS ACCUMULATED: #{ci:1}%05d\n", g_game.total_coins);
     tte_write(buf);
 }
 
@@ -1375,13 +1375,13 @@ void render_title_screen(void) {
         tte_write("#{P:176,123}#{ci:1}2000 G\n");
     }
 
-    // Bottom Metallic Box: Only "COINS COLLECTED: %06d" vertically & horizontally centered (Rows 17..19, Y = 144)
+    // Bottom Metallic Box: Only "COINS COLLECTED: %05d" vertically & horizontally centered (Rows 17..19, Y = 144)
     char coins_buf[64];
-    sprintf(coins_buf, "COINS COLLECTED: %06d", g_game.total_coins);
+    sprintf(coins_buf, "COINS COLLECTED: %05d", g_game.total_coins);
     int c_len = (int)strlen(coins_buf);
     int c_x = 120 - (c_len * 8) / 2;
     char tte_buf[96];
-    sprintf(tte_buf, "#{P:%d,144}#{ci:3}COINS COLLECTED: #{ci:1}%06d\n", c_x, g_game.total_coins);
+    sprintf(tte_buf, "#{P:%d,144}#{ci:3}COINS COLLECTED: #{ci:1}%05d\n", c_x, g_game.total_coins);
     tte_write(tte_buf);
 }
 
@@ -1410,13 +1410,13 @@ void render_map_select_screen(void) {
     sprintf(sub_buf, "#{P:%d,122}#{ci:3}%s\n", sub_x, sub);
     tte_write(sub_buf);
 
-    // Bottom Metallic Box: Only "COINS COLLECTED: %06d" vertically & horizontally centered (Rows 17..19, Y = 144)
+    // Bottom Metallic Box: Only "COINS COLLECTED: %05d" vertically & horizontally centered (Rows 17..19, Y = 144)
     char coins_buf[64];
-    sprintf(coins_buf, "COINS COLLECTED: %06d", g_game.total_coins);
+    sprintf(coins_buf, "COINS COLLECTED: %05d", g_game.total_coins);
     int c_len = (int)strlen(coins_buf);
     int c_x = 120 - (c_len * 8) / 2;
     char tte_buf[96];
-    sprintf(tte_buf, "#{P:%d,144}COINS COLLECTED: %06d\n", c_x, g_game.total_coins);
+    sprintf(tte_buf, "#{P:%d,144}COINS COLLECTED: %05d\n", c_x, g_game.total_coins);
     tte_write(tte_buf);
 }
 
@@ -1430,7 +1430,7 @@ void render_hud(int *spr_idx_io) {
         sprintf(buf, "#{P:10,136}#{ci:2}SCORE:#{ci:1}%07d   ", g_game.score);
     }
     tte_write(buf);
-    sprintf(buf, "#{P:162,136}#{ci:1}%03d", g_game.coins_collected);
+    sprintf(buf, "#{P:162,136}#{ci:1}%05d", g_game.coins_collected);
     tte_write(buf);
 
     // Line 2: DIST on left, Wheel icon + speed in km/h on right (cleanly separated)
@@ -1490,7 +1490,7 @@ void render_gameover_screen(void) {
     tte_write(buf);
     sprintf(buf, "#{P:32,64}DISTANCE:      %06dm\n", g_game.distance_m);
     tte_write(buf);
-    sprintf(buf, "#{P:32,80}COINS ACQUIRED:   +%03d\n", g_game.coins_collected);
+    sprintf(buf, "#{P:32,80}COINS ACQUIRED:  +%05d\n", g_game.coins_collected);
     tte_write(buf);
 
     if (g_game.is_new_high_score || (g_game.score >= g_game.high_score && g_game.score > 0)) {

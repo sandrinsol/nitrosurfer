@@ -249,14 +249,19 @@ static int sram_load_total_coins(void) {
                     ((int)SRAM_BASE[9] << 8) |
                     ((int)SRAM_BASE[10] << 16) |
                     ((int)SRAM_BASE[11] << 24);
-        if (coins >= 0 && coins <= 999999) {
+        if (coins >= 0 && coins <= 99999) {
             return coins;
+        }
+        if (coins > 99999) {
+            return 99999;
         }
     }
     return 0;
 }
 
 static void sram_save_total_coins(int coins) {
+    if (coins < 0) coins = 0;
+    if (coins > 99999) coins = 99999;
     SRAM_BASE[0] = SRAM_MAGIC_0;
     SRAM_BASE[1] = SRAM_MAGIC_1;
     SRAM_BASE[2] = SRAM_MAGIC_2;
@@ -313,7 +318,10 @@ static void streak_add_action(void) {
     }
 }
 
+static int s_start_b_presses = 0;
+
 void game_init(void) {
+    s_start_b_presses = 0;
     g_game.state = STATE_START;
     g_game.score = 0;
     g_game.high_score = sram_load_high_score();
@@ -907,9 +915,9 @@ void coins_update(void) {
             if (dx < pickup_rad && dy < pickup_dy) {
                 g_coins[i].active = false;
                 g_game.coins_collected++;
-                if (g_game.coins_collected > 999) g_game.coins_collected = 999;
+                if (g_game.coins_collected > 99999) g_game.coins_collected = 99999;
                 g_game.total_coins++;
-                if (g_game.total_coins > 999999) g_game.total_coins = 999999;
+                if (g_game.total_coins > 99999) g_game.total_coins = 99999;
                 sram_save_total_coins(g_game.total_coins);
                 add_score(50);
                 sfx_coin();
@@ -1265,7 +1273,22 @@ void game_update(void) {
     debris_update();
 
     if (g_game.state == STATE_START) {
+        if (key_hit(KEY_B)) {
+            s_start_b_presses++;
+            if (s_start_b_presses == 20) {
+                g_game.total_coins = 99999;
+                sram_save_total_coins(g_game.total_coins);
+                sfx_high_score();
+            } else if (s_start_b_presses > 20) {
+                g_game.total_coins = 99999;
+                sram_save_total_coins(g_game.total_coins);
+                sfx_coin();
+            } else {
+                sfx_coin();
+            }
+        }
         if (key_hit(KEY_START) || key_hit(KEY_A)) {
+            s_start_b_presses = 0;
             render_clear_title_boxes();
             memset16(se_mem[31], 0, 32 * 32);
             g_game.state = STATE_TITLE;
@@ -1291,6 +1314,7 @@ void game_update(void) {
             render_clear_title_boxes();
             memset16(se_mem[31], 0, 32 * 32);
             g_game.state = STATE_START;
+            s_start_b_presses = 0;
             sfx_pause();
             return;
         }
