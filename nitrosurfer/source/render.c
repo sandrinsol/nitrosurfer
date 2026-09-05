@@ -926,16 +926,19 @@ void render_title_boxes(int selected_color) {
         }
     }
 
-    // Car Attributes & Stats Panel Backdrop on BG1 inside Rows 14..16 (tx 1..28, cols 1..28)
-    for (int ty = 14; ty <= 16; ty++) {
-        for (int tx = 1; tx < 29; tx++) {
-            sbb1[ty * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
-        }
-    }
-    // Clear Row 9 backdrop cleanly between Row 0 and Row 1
+    // Clear Rows 9, 15, and 16 so no black border appears behind prices
     for (int tx = 0; tx < 30; tx++) {
-        sbb1[9 * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
+        sbb1[9 * 32 + tx] = 0;
+        sbb1[15 * 32 + tx] = 0;
+        sbb1[16 * 32 + tx] = 0;
     }
+    // Clear gaps between boxes on Row 14
+    sbb1[14 * 32 + 0] = 0;
+    sbb1[14 * 32 + 9] = 0;
+    sbb1[14 * 32 + 10] = 0;
+    sbb1[14 * 32 + 19] = 0;
+    sbb1[14 * 32 + 20] = 0;
+    sbb1[14 * 32 + 29] = 0;
 }
 
 // Draw 6 Boxes in 3x2 Grid for Map Selection on BG1 (SBB 30)
@@ -1019,16 +1022,19 @@ void render_map_boxes(int selected_map) {
         }
     }
 
-    // Backdrop on BG1 inside Rows 14..16 (tx 1..28, cols 1..28) behind row 1 prices
-    for (int ty = 14; ty <= 16; ty++) {
-        for (int tx = 1; tx < 29; tx++) {
-            sbb1[ty * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
-        }
-    }
-    // Clear Row 9 backdrop cleanly between Row 0 and Row 1
+    // Clear Rows 9, 15, and 16 so no black border appears behind prices
     for (int tx = 0; tx < 30; tx++) {
         sbb1[9 * 32 + tx] = 0;
+        sbb1[15 * 32 + tx] = 0;
+        sbb1[16 * 32 + tx] = 0;
     }
+    // Clear gaps between boxes on Row 14
+    sbb1[14 * 32 + 0] = 0;
+    sbb1[14 * 32 + 9] = 0;
+    sbb1[14 * 32 + 10] = 0;
+    sbb1[14 * 32 + 19] = 0;
+    sbb1[14 * 32 + 20] = 0;
+    sbb1[14 * 32 + 29] = 0;
 }
 
 // Clear Selection Boxes from BG1 when entering gameplay or switching screens
