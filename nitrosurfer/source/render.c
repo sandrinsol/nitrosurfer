@@ -1460,27 +1460,46 @@ void render_hud(int *spr_idx_io) {
 
 void render_gameover_screen(void) {
     tte_erase_screen();
-    tte_write("#{P:72,20}#{ci:4}** CRASHED! **\n");
-    tte_write("#{P:64,34}#{ci:2}--- GAME OVER ---\n");
 
+    // Rebuild unified bottom metallic box on BG1 (remove any divider from gameplay HUD)
+    SCR_ENTRY *sbb1 = se_mem[30];
+    sbb1[17 * 32 + 0] = SE_BUILD(TILE_HUD_BOX_TL, 2, 0, 0);
+    for (int tx = 1; tx < 29; tx++) sbb1[17 * 32 + tx] = SE_BUILD(TILE_HUD_BOX_TOP, 2, 0, 0);
+    sbb1[17 * 32 + 29] = SE_BUILD(TILE_HUD_BOX_TR, 2, 0, 0);
+
+    sbb1[18 * 32 + 0] = SE_BUILD(TILE_HUD_BOX_L, 2, 0, 0);
+    for (int tx = 1; tx < 29; tx++) sbb1[18 * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
+    sbb1[18 * 32 + 29] = SE_BUILD(TILE_HUD_BOX_R, 2, 0, 0);
+
+    sbb1[19 * 32 + 0] = SE_BUILD(TILE_HUD_BOX_BL, 2, 0, 0);
+    for (int tx = 1; tx < 29; tx++) sbb1[19 * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BTM, 2, 0, 0);
+    sbb1[19 * 32 + 29] = SE_BUILD(TILE_HUD_BOX_BR, 2, 0, 0);
+
+    // Centered Title & Subtitle (Row 2 Y=16, Row 4 Y=32)
+    tte_write("#{P:64,16}#{ci:4}** CRASHED! **\n");
+    tte_write("#{P:52,32}#{ci:2}--- GAME OVER ---\n");
+
+    // Statistics Table: Exact 22 characters per line starting at X=32 (exact 32px left/right margins)
     char buf[128];
-    sprintf(buf, "#{P:36,50}#{ci:3}FINAL SCORE:  #{ci:1}%07d\n", g_game.score);
+    sprintf(buf, "#{P:32,48}FINAL SCORE:   %07d\n", g_game.score);
     tte_write(buf);
-    sprintf(buf, "#{P:36,64}#{ci:3}DISTANCE:     #{ci:1}%06dm\n", g_game.distance_m);
+    sprintf(buf, "#{P:32,64}DISTANCE:      %06dm\n", g_game.distance_m);
     tte_write(buf);
-    sprintf(buf, "#{P:36,78}#{ci:3}COINS WON:        #{ci:1}%03d\n", g_game.coins_collected);
+    sprintf(buf, "#{P:32,80}GOLD ACQUIRED:   +%03d\n", g_game.coins_collected);
     tte_write(buf);
 
     if (g_game.is_new_high_score || (g_game.score >= g_game.high_score && g_game.score > 0)) {
-        // Flashing celebration fanfare text in arcade gold - 23 chars = 184px, centered at X=28
+        // Flashing celebration fanfare text in arcade gold - 23 chars = 184px, centered at X=28, Row 12 Y=96
         if ((g_game.frame_count & 31) < 22) {
-            tte_write("#{P:28,94}#{ci:2}*** NEW HIGH SCORE! ***\n");
+            tte_write("#{P:28,96}*** NEW HIGH SCORE! ***\n");
         }
     }
 
-    if ((g_game.frame_count & 31) < 20) {
-        tte_write("#{P:51,144}#{ci:1}START: RETRY   B: TITLE\n");
-    }
+    // Centered prompt text in bottom beveled HUD box (Row 18 Y=144)
+    // Left: START: RETRY (12 chars = 96px, X=16..112)
+    // Right: B: TITLE (8 chars = 64px, X=148..212)
+    tte_write("#{P:16,144}START: RETRY\n");
+    tte_write("#{P:148,144}B: TITLE\n");
 }
 
 void render_pause_screen(void) {
