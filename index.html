@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nitro Surfer - 60 FPS GBA Arcade Racer</title>
   <meta name="description" content="Play Nitro Surfer online - a high-speed 60 FPS top-down arcade racing game for Game Boy Advance with 6 worlds, 5 unlockable hypercars, and turbo nitro drifting." />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <style>
     :root {
       --bg: #090a10;
@@ -362,6 +365,15 @@
     let isStarted = false;
     let isMuted = false;
 
+    // Invalidate stale ROM cache from IndexedDB
+    if (window.indexedDB) {
+      try {
+        indexedDB.deleteDatabase('EmulatorJS-roms');
+      } catch (e) {
+        console.warn('Could not clear EmulatorJS-roms database', e);
+      }
+    }
+
     function bootEmulator(romUrl, gameName = 'Nitro Surfer', isBlob = false) {
       // Configure EmulatorJS
       window.EJS_player = '#game';
@@ -376,6 +388,7 @@
       window.EJS_threads = false;
       window.EJS_backgroundColor = '#000000';
       window.EJS_color = '#00f0ff';
+      window.EJS_disableDatabases = true; // Always load fresh ROM from network
 
       if (!document.getElementById('ejs-loader-script')) {
         const s = document.createElement('script');
@@ -389,7 +402,8 @@
       if (isStarted) return;
       isStarted = true;
       document.getElementById('startOverlay').classList.add('hidden');
-      bootEmulator('nitrosurfer.gba', 'Nitro Surfer');
+      // Append cache-busting query timestamp to guarantee the latest ROM is downloaded
+      bootEmulator('nitrosurfer.gba?t=' + Date.now(), 'Nitro Surfer');
     }
 
     document.getElementById('startOverlay').addEventListener('click', startGame);
