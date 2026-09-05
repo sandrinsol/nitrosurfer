@@ -3,90 +3,443 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game Boy Emulator</title>
+  <title>Nitro Surfer - 60 FPS GBA Arcade Racer</title>
+  <meta name="description" content="Play Nitro Surfer online - a high-speed 60 FPS top-down arcade racing game for Game Boy Advance with 6 worlds, 5 unlockable hypercars, and turbo nitro drifting." />
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
+    :root {
+      --bg: #090a10;
+      --card-bg: #12141f;
+      --card-border: #1e2235;
+      --accent: #00f0ff;
+      --accent-glow: rgba(0, 240, 255, 0.35);
+      --nitro-pink: #ff0077;
+      --nitro-glow: rgba(255, 0, 119, 0.4);
+      --gold: #ffb800;
+      --text: #f0f3fa;
+      --text-dim: #8b92aa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 20px;
-      background: #16161e;
-      color: #e6e6ee;
-      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px 16px 40px;
+      line-height: 1.5;
     }
-    h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .5px; }
-    #picker {
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      max-width: 800px;
+      width: 100%;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: clamp(24px, 5vw, 36px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 20%, var(--accent) 70%, var(--nitro-pink) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    /* Cabinet Container */
+    .cabinet {
+      width: 100%;
+      max-width: 768px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 25px var(--accent-glow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Screen Area */
+    .screen-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+    #game canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Start Overlay */
+    .start-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(18, 20, 31, 0.92) 0%, rgba(9, 10, 16, 0.98) 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      padding: 40px;
-    }
-    label.btn {
-      background: #5a4fff;
-      color: #fff;
-      padding: 12px 22px;
-      border-radius: 10px;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
       cursor: pointer;
+    }
+    .start-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0099ff 100%);
+      color: #03101c;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 14px 32px;
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 0 25px var(--accent-glow);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .play-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.6);
+    }
+    .play-btn:active {
+      transform: scale(0.98);
+    }
+    .play-tip {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Cabinet Toolbar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #0d0f17;
+      border-top: 1px solid var(--card-border);
+    }
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-tool {
+      background: #181b28;
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
       font-weight: 600;
-      transition: background .15s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, border-color 0.15s;
     }
-    label.btn:hover { background: #6d63ff; }
-    small { color: #8a8a9a; }
-    #box {
+    .btn-tool:hover {
+      background: #24293c;
+      border-color: var(--accent);
+    }
+    .btn-tool input[type="file"] {
+      display: none;
+    }
+
+    /* Controls & Info Section */
+    .meta-grid {
       width: 100%;
-      max-width: 720px;
-      aspect-ratio: 3 / 2;
+      max-width: 768px;
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
     }
-    #game { width: 100%; height: 100%; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+    }
+    .control-row:last-child {
+      border-bottom: none;
+    }
+    .key-badge {
+      display: inline-block;
+      background: #1e2235;
+      border: 1px solid #333a55;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+    }
+    .features-list {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .features-list li strong {
+      color: var(--text);
+    }
+
+    footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <h1>🎮 Game Boy Emulator</h1>
 
-  <div id="picker">
-    <label class="btn">
-      Load ROM
-      <input id="rom" type="file" accept=".gba,.gb,.gbc,.zip" hidden />
-    </label>
-    <small>Pick a <code>.gba</code> file from your computer to start playing. Runs 100% offline.</small>
-  </div>
+  <header>
+    <span class="badge">GAME BOY ADVANCE &bull; 60 FPS</span>
+    <h1>NITRO SURFER</h1>
+    <p class="subtitle">High-speed retro arcade racer &mdash; drift through 6 diverse worlds, dodge dynamic hazards, and unleash turbo boosts.</p>
+  </header>
 
-  <div id="box" hidden>
-    <div id="game"></div>
-  </div>
+  <main class="cabinet" id="cabinet">
+    <div class="screen-wrapper" id="screenWrapper">
+      <div id="game"></div>
+
+      <div class="start-overlay" id="startOverlay">
+        <button class="play-btn" id="playBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          START ENGINE / PLAY
+        </button>
+        <span class="play-tip">Click to start with high-fidelity 60 FPS audio & video</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tool-group">
+        <button class="btn-tool" id="btnRestart" title="Restart Game">
+          <span>🔄</span> Reset
+        </button>
+        <button class="btn-tool" id="btnMute" title="Toggle Sound">
+          <span id="muteIcon">🔊</span> Sound
+        </button>
+        <button class="btn-tool" id="btnFullscreen" title="Toggle Fullscreen">
+          <span>⛶</span> Fullscreen
+        </button>
+      </div>
+
+      <div class="tool-group">
+        <label class="btn-tool" title="Load a custom .gba ROM from disk">
+          <span>📂</span> Custom ROM
+          <input id="customRomInput" type="file" accept=".gba,.gb,.gbc,.zip" />
+        </label>
+      </div>
+    </div>
+  </main>
+
+  <section class="meta-grid">
+    <div class="card">
+      <div class="card-title">🕹️ Controls Guide</div>
+      <div class="control-row">
+        <span>Steer Left / Right</span>
+        <div><span class="key-badge">◀</span> <span class="key-badge">▶</span> / <span class="key-badge">A</span> <span class="key-badge">D</span></div>
+      </div>
+      <div class="control-row">
+        <span>Accelerate (GBA A)</span>
+        <div><span class="key-badge">Z</span> or <span class="key-badge">▲</span></div>
+      </div>
+      <div class="control-row">
+        <span>Brake / Drift (GBA B)</span>
+        <div><span class="key-badge">X</span> or <span class="key-badge">▼</span></div>
+      </div>
+      <div class="control-row">
+        <span>Nitro Boost (GBA L)</span>
+        <div><span class="key-badge">Space</span> or <span class="key-badge">A</span></div>
+      </div>
+      <div class="control-row">
+        <span>Pause / Menu (START)</span>
+        <div><span class="key-badge">Enter</span></div>
+      </div>
+      <div class="control-row">
+        <span>Select / Back (SELECT)</span>
+        <div><span class="key-badge">Shift</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏆 Features & Worlds</div>
+      <ul class="features-list">
+        <li><strong>6 Iconic Tracks:</strong> Palm Beach, City Highway, Maya Temple, Gothic Midnight, Cape Orbital, and Winter Snow.</li>
+        <li><strong>5 Unlockable Hypercars:</strong> Collect coins during runs to unlock faster machines in the Car Select showroom.</li>
+        <li><strong>Dynamic Hazards:</strong> Roadblocks, oil slicks, speed barriers, and moving semi-trucks.</li>
+        <li><strong>Instant Save States:</strong> Automatically saves progress locally in your browser.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Powered by the bundled EmulatorJS mgba WebAssembly core &bull; 100% client-side</p>
+  </footer>
 
   <script>
-    document.getElementById('rom').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    let isStarted = false;
+    let isMuted = false;
 
-      document.getElementById('picker').hidden = true;
-      document.getElementById('box').hidden = false;
-
-      // EmulatorJS configuration — it does all the actual emulation.
-      // Everything is served from the local data/ folder: fully offline.
+    function bootEmulator(romUrl, gameName = 'Nitro Surfer', isBlob = false) {
+      // Configure EmulatorJS
       window.EJS_player = '#game';
-      // Pick the core by ROM extension: .gb/.gbc -> Game Boy (gambatte), else GBA (mgba).
-      const ext = file.name.split('.').pop().toLowerCase();
-      window.EJS_core = (ext === 'gb' || ext === 'gbc') ? 'gb' : 'gba';
-      window.EJS_gameName = file.name.replace(/\.[^.]+$/, '');
-      window.EJS_gameUrl = URL.createObjectURL(file);
+      window.EJS_core = 'gba';
+      window.EJS_gameName = gameName;
+      window.EJS_gameUrl = romUrl;
       window.EJS_pathtodata = 'data/';
       window.EJS_startOnLoaded = true;
-      // Use the built-in English UI so no localization file is fetched.
+      window.EJS_volume = isMuted ? 0 : 0.8;
       window.EJS_language = 'en-US';
       window.EJS_disableAutoLang = false;
+      window.EJS_threads = false;
+      window.EJS_backgroundColor = '#000000';
+      window.EJS_color = '#00f0ff';
 
-      const s = document.createElement('script');
-      s.src = 'data/loader.js';
-      document.body.appendChild(s);
+      if (!document.getElementById('ejs-loader-script')) {
+        const s = document.createElement('script');
+        s.id = 'ejs-loader-script';
+        s.src = 'data/loader.js';
+        document.body.appendChild(s);
+      }
+    }
+
+    function startGame() {
+      if (isStarted) return;
+      isStarted = true;
+      document.getElementById('startOverlay').classList.add('hidden');
+      bootEmulator('nitrosurfer.gba', 'Nitro Surfer');
+    }
+
+    document.getElementById('startOverlay').addEventListener('click', startGame);
+    document.getElementById('playBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      startGame();
+    });
+
+    // Custom ROM file picker
+    document.getElementById('customRomInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('startOverlay').classList.add('hidden');
+      isStarted = true;
+      const url = URL.createObjectURL(file);
+      const name = file.name.replace(/\.[^.]+$/, '');
+      bootEmulator(url, name, true);
+    });
+
+    // Reset button
+    document.getElementById('btnRestart').addEventListener('click', () => {
+      if (window.EJS_emulator && window.EJS_emulator.gameManager) {
+        window.EJS_emulator.gameManager.restart();
+      } else if (!isStarted) {
+        startGame();
+      }
+    });
+
+    // Mute button
+    document.getElementById('btnMute').addEventListener('click', () => {
+      isMuted = !isMuted;
+      document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🔊';
+      if (window.EJS_emulator && window.EJS_emulator.gameManager) {
+        window.EJS_emulator.gameManager.setVolume(isMuted ? 0 : 0.8);
+      }
+    });
+
+    // Fullscreen button
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      const cabinet = document.getElementById('cabinet');
+      if (!document.fullscreenElement) {
+        if (cabinet.requestFullscreen) {
+          cabinet.requestFullscreen();
+        } else if (cabinet.webkitRequestFullscreen) {
+          cabinet.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    // Prevent arrow keys and spacebar from scrolling page when playing
+    window.addEventListener('keydown', (e) => {
+      if (isStarted && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        if (document.activeElement === document.body || document.activeElement.id === 'game') {
+          e.preventDefault();
+        }
+      }
     });
   </script>
 </body>
 </html>
+

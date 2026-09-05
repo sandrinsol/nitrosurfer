@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "gb-gbc-gba-test": {
+      "command": "node",
+      "args": [
+        "/Users/sandrinobreshani/Downloads/newthing/harness/mcp-server.mjs"
+      ]
+    }
+  }
+}

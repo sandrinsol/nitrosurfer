@@ -1,110 +1,104 @@
-# Game Boy Emulator + AI Test Harness (GB / GBC / GBA, fully offline)
+# 🏎️ Nitro Surfer (Game Boy Advance)
 
-A dead-simple browser-based Game Boy Advance emulator. Everything it needs is
-bundled in the `data/` folder — **no internet connection required**, ever.
+**Nitro Surfer** is a fast-paced 60 FPS top-down arcade racer built from the ground up for the Game Boy Advance. Drift across multi-lane highways, dodge dynamic traffic and construction barriers, collect coins, and blast through courses with high-velocity Nitro boosts.
 
-Two ways to use it:
+Includes an offline-ready **web arcade player** and an **AI/headless test harness** powered by EmulatorJS (libretro `mgba`).
 
-- **Play in a browser** — see below.
-- **Let an AI test your GBA/GB/GBC games** — the [`harness/`](harness/) folder is an
-  **MCP server** (+ Node library) that drives this same emulator headlessly: load a
-  ROM, press buttons, capture screenshots the agent can *see*, read and write real RAM (GBA + GB/GBC), and
-  assert against golden frames. No third-party emulator. See
-  [harness/README.md](harness/README.md).
+---
 
-**Use it in your editor** — VS Code (Copilot agent mode), Antigravity, Cursor,
-Windsurf, Claude Desktop/Code, or any MCP host. Setup for each is in
-[harness/README.md → Use as an MCP server](harness/README.md#use-as-an-mcp-server);
-a ready-to-edit VS Code config is at [`.vscode/mcp.json.example`](.vscode/mcp.json.example).
+## 🎮 Play Online
 
-**License:** GPL-3.0-or-later (this repo bundles EmulatorJS, which is GPL-3.0). See
-`LICENSE` and `NOTICE.md`. Only the freeware `anguna.gba` is included — don't commit
-commercial ROMs.
+When deployed via **GitHub Pages** or **Netlify**, Nitro Surfer runs directly in any modern desktop or mobile browser with zero installation:
 
-## Run it
+- **GitHub Pages:** `https://sandrinsol.github.io/nitrosurfer/`
+- **Playable Web Runner:** Open `index.html` on any static HTTP host.
 
-Because browsers block the emulator core from loading over `file://`, it runs on
-a tiny local web server.
+### Play Locally
 
-**Easiest:** double-click **`start.command`**. It serves the folder on
-`http://localhost:8000` (or the next free port) and opens your browser.
+Browsers restrict WebAssembly and Web Audio over `file://` URLs, so a lightweight local server is used:
 
-**Or from a terminal:**
+1. **One-Click (macOS):** Double-click [`start.command`](start.command). It opens the game in your default browser at `http://localhost:8000/`.
+2. **Terminal:**
+   ```bash
+   python3 -m http.server 8000
+   # Open http://localhost:8000
+   ```
+
+---
+
+## 🕹️ Controls
+
+| Action | GBA Button | Keyboard (Web) | Description |
+|---|---|---|---|
+| **Steer** | D-Pad Left / Right | `◀` `▶` or `A` / `D` | Steer vehicle across lanes |
+| **Accelerate** | A Button | `Z` or `▲` | Gas / Confirm menu selection |
+| **Brake / Drift** | B Button | `X` or `▼` | Decelerate / Power slide around hazards |
+| **Nitro Boost** | L Shoulder | `Space` or `A` | Instant supersonic speed burst |
+| **Look Back / Horn** | R Shoulder | `Shift` or `S` | Horn / glance behind |
+| **Pause / Menu** | START | `Enter` | Open in-game pause menu |
+| **Select** | SELECT | `Shift` / `Backspace` | Toggle UI modes / back |
+
+---
+
+## 🌟 Game Features
+
+- **6 Unique Worlds:**
+  - 🏖️ **Palm Beach:** High-speed coastal highway with palm hazards.
+  - 🏙️ **City Highway:** Dense urban traffic and speeding semi-trucks.
+  - 🏛️ **Maya Temple Trail:** Ancient jungle road with ruins and narrow chicanes.
+  - 🌙 **Gothic Midnight:** Low-visibility night raceway with slick patches.
+  - 🚀 **Cape Orbital:** Futuristic spaceport runway with high-intensity jumps.
+  - ❄️ **Winter Snow:** Slippery snowdrifts and severe ice spinouts.
+- **5 Unlockable Hypercars:** Unlock custom machines with distinct acceleration, top speed, and handling in the Showroom.
+- **Dynamic Obstacles:** Roadblocks, warning signs, oncoming trucks, and oil slicks.
+- **Pure 60 FPS Performance:** Engineered in C for the ARM7TDMI processor with hardware sprite scaling and direct sound.
+
+---
+
+## 🛠️ Building the ROM from Source
+
+To compile [`nitrosurfer.gba`](nitrosurfer.gba) yourself, you need the **devkitARM** toolchain (devkitPro) and **libtonc**:
 
 ```bash
-cd gb-gbc-gba-test-mcp
-python3 -m http.server 8000
-# then open http://localhost:8000 in your browser
+cd nitrosurfer
+make
 ```
 
-Then click **Load ROM** and pick a `.gba`, `.gb`, or `.gbc` file.
+The compiled binary will be placed at `nitrosurfer/nitrosurfer.gba` and copied to the root directory.
 
-A free homebrew game, **`anguna.gba`**, is included so you can try it right away.
-Delete it if you don't want it — you can load any `.gba` ROM.
+---
 
-## Default controls
+## 🤖 Automated Test Harness (`harness/`)
 
-| Action | Key |
-|--------|-----|
-| D-Pad  | Arrow keys |
-| A / B  | X / Z |
-| L / R  | A / S |
-| Start  | Enter |
-| Select | Shift |
+The repository includes a headless Playwright + libretro mgba test harness in [`harness/`](harness/):
 
-The control bar at the bottom of the screen has pause, save/load states,
-fullscreen, volume, and a settings menu (including gamepad remapping).
+- **Deterministic Frame Clock:** Step exact frame numbers, take bit-identical screenshots, and compare against goldens.
+- **RAM Inspection & Injection:** Direct memory reading and writing (`g_player`, `g_obstacles`, `g_game`).
+- **Run the Test Suite:**
+  ```bash
+  cd harness
+  npm install
+  npm test
+  ```
 
-## Put it online (Netlify)
+---
 
-The whole folder is a static site — no build step. A `netlify.toml` is included.
+## 🚀 Hosting & Deployment
 
-**Drag-and-drop (easiest):**
-1. Go to <https://app.netlify.com/drop>.
-2. Drag the **`gb-gbc-gba-test-mcp`** folder onto the page.
-3. Netlify gives you a live URL. Done.
+### GitHub Pages (Automatic)
+This repository includes a GitHub Actions workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) that automatically deploys the web player to GitHub Pages on every push to `main`.
 
-**Netlify CLI:**
-```bash
-cd gb-gbc-gba-test-mcp
-npx netlify-cli deploy --prod
-```
+*(Note: If the repository is private, GitHub Pages requires a GitHub Pro/Enterprise plan or changing visibility to Public in Repo Settings).*
 
-**From Git:** push this folder to a repo and connect it in Netlify. Leave the
-build command empty and set the publish directory to the folder root (`.`).
+### Netlify (100% Free for Private Repos)
+Netlify natively connects to private GitHub repositories for free with no build step required:
+1. Go to [Netlify Dashboard](https://app.netlify.com).
+2. Click **Add new site** > **Import an existing project** > Select `sandrinsol/nitrosurfer`.
+3. Set publish directory to `.` (root). Netlify uses the pre-configured [`netlify.toml`](netlify.toml) for caching and WASM headers.
 
-Once deployed it works over plain HTTPS with no server config — it's all static
-files. (You no longer need `start.command`; that's only for running locally.)
+---
 
-## How it works
+## 📜 License & Credits
 
-The heavy lifting (ARM7TDMI CPU, graphics, audio) is done by the open-source
-[EmulatorJS](https://emulatorjs.org) `mgba` core. All of its files live locally:
-
-```
-index.html            the page (~60 lines)
-netlify.toml          static-hosting config for Netlify
-start.command         one-click local server launcher (local use only)
-anguna.gba            sample freeware homebrew game
-data/
-  loader.js           EmulatorJS bootstrap
-  emulator.min.js     EmulatorJS engine
-  emulator.min.css    styling
-  version.json
-  cores/
-    mgba-wasm.data           GBA core (WebGL2)
-    mgba-legacy-wasm.data     GBA core (fallback)
-    cores.json, reports/mgba.json
-  compression/        7z/zip/rar workers for unpacking the core
-```
-
-Your ROM never leaves your machine — everything runs in your browser, and the
-page makes **zero external network requests** (verified). It has been patched so
-even the EmulatorJS update-check reads the bundled `data/version.json` instead of
-the internet.
-
-## Notes
-
-- You must supply your own commercial ROMs; only the freeware `anguna.gba` is
-  included.
-- Save files and save states are stored in your browser's local storage.
+- Game Code & Assets: © Sandrino Breshani.
+- Bundled Emulator Core: [EmulatorJS](https://emulatorjs.org) (GPL-3.0-or-later). See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).

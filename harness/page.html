@@ -77,7 +77,12 @@
     // boot (frame 0), so identical scripts stop on identical emulated frames across
     // runs regardless of boot jitter. (Verified bit-identical.)
     Emu._target = 0;
-    Emu.waitFrames = (n) => { Emu._target += n; return waitUntil(Emu._target); };
+    Emu.waitFrames = (n) => {
+      const cur = gm().getFrameNum();
+      if (cur > Emu._target) Emu._target = cur;
+      Emu._target += n;
+      return waitUntil(Emu._target);
+    };
     Emu.waitUntilFrame = (abs) => { if (abs > Emu._target) Emu._target = abs; return waitUntil(abs); };
 
     // Press a button, hold it for holdFrames, release, then settle for releaseFrames.
@@ -115,7 +120,7 @@
         requestAnimationFrame(tick);
       })();
     });
-    Emu.restart = () => gm().restart();
+    Emu.restart = () => { Emu._target = 0; return gm().restart(); };
 
     // Live system RAM, IF the loaded core exports the libretro memory API.
     // The bundled mgba core does NOT (returns null); a core rebuilt with
