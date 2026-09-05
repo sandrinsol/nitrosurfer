@@ -227,13 +227,17 @@ typedef struct {
     int wave_step;          // Step within wave
     bool is_new_high_score; // True if run broke personal best
     bool high_score_fanfare_played; // True once celebration fanfare has sounded
-#define CAR_UNLOCK_COST     2000
-#define CAR_UNLOCKED_DEFAULT ((1 << CAR_COLOR_RED) | (1 << CAR_COLOR_BLUE))
-
     u8 cars_unlocked;       // Bitmask of unlocked cars (bits 0..5, Red & Blue default)
+    u8 maps_unlocked;       // Bitmask of unlocked maps (bits 0..5, City default)
     CarColor car_color;     // Selected player sports car color (0..CAR_COLOR_COUNT-1)
     MapTheme map_theme;     // Selected track map theme (0..MAP_COUNT-1)
 } Game;
+
+#define CAR_UNLOCK_COST      2000
+#define CAR_UNLOCKED_DEFAULT ((1 << CAR_COLOR_RED) | (1 << CAR_COLOR_BLUE))
+
+#define MAP_UNLOCKED_DEFAULT (1 << MAP_CITY)
+extern const int g_map_unlock_costs[MAP_COUNT];
 
 extern const Camera g_camera;
 extern Game g_game;

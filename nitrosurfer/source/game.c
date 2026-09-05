@@ -272,6 +272,15 @@ static void sram_save_total_coins(int coins) {
     SRAM_BASE[11] = (u8)((coins >> 24) & 0xFF);
 }
 
+const int g_map_unlock_costs[MAP_COUNT] = {
+    0,     // MAP_CITY (unlocked)
+    1000,  // MAP_BEACH (palm)
+    2000,  // MAP_WINTER
+    3000,  // MAP_ORBITAL
+    4000,  // MAP_GOTHIC
+    5000   // MAP_MAYA
+};
+
 static u8 sram_load_unlocked_cars(void) {
     if (SRAM_BASE[0] == SRAM_MAGIC_0 &&
         SRAM_BASE[1] == SRAM_MAGIC_1 &&
@@ -291,6 +300,27 @@ static void sram_save_unlocked_cars(u8 mask) {
     SRAM_BASE[2] = SRAM_MAGIC_2;
     SRAM_BASE[3] = SRAM_MAGIC_3;
     SRAM_BASE[12] = (mask & 0x3F) | CAR_UNLOCKED_DEFAULT;
+}
+
+static u8 sram_load_unlocked_maps(void) {
+    if (SRAM_BASE[0] == SRAM_MAGIC_0 &&
+        SRAM_BASE[1] == SRAM_MAGIC_1 &&
+        SRAM_BASE[2] == SRAM_MAGIC_2 &&
+        SRAM_BASE[3] == SRAM_MAGIC_3) {
+        u8 val = SRAM_BASE[13];
+        if ((val & ~0x3F) == 0 && (val & MAP_UNLOCKED_DEFAULT) == MAP_UNLOCKED_DEFAULT) {
+            return val;
+        }
+    }
+    return MAP_UNLOCKED_DEFAULT;
+}
+
+static void sram_save_unlocked_maps(u8 mask) {
+    SRAM_BASE[0] = SRAM_MAGIC_0;
+    SRAM_BASE[1] = SRAM_MAGIC_1;
+    SRAM_BASE[2] = SRAM_MAGIC_2;
+    SRAM_BASE[3] = SRAM_MAGIC_3;
+    SRAM_BASE[13] = (mask & 0x3F) | MAP_UNLOCKED_DEFAULT;
 }
 
 static inline void add_score(int points) {
@@ -328,6 +358,7 @@ void game_init(void) {
     g_game.coins_collected = 0;
     g_game.total_coins = sram_load_total_coins();
     g_game.cars_unlocked = sram_load_unlocked_cars();
+    g_game.maps_unlocked = sram_load_unlocked_maps();
     g_game.distance_m = 0;
     g_game.distance_fp = 0;
     g_game.base_speed = TO_FP(0.52f);
@@ -1359,7 +1390,21 @@ void game_update(void) {
             g_game.state = STATE_TITLE;
             sfx_pause();
         } else if (key_hit(KEY_START) || key_hit(KEY_A)) {
-            game_start();
+            bool is_unlocked = (g_game.maps_unlocked & (1 << g_game.map_theme)) != 0;
+            if (is_unlocked) {
+                game_start();
+            } else {
+                int cost = g_map_unlock_costs[g_game.map_theme];
+                if (g_game.total_coins >= cost) {
+                    g_game.total_coins -= cost;
+                    g_game.maps_unlocked |= (1 << g_game.map_theme);
+                    sram_save_total_coins(g_game.total_coins);
+                    sram_save_unlocked_maps(g_game.maps_unlocked);
+                    sfx_high_score();
+                } else {
+                    sfx_skid();
+                }
+            }
         }
         return;
     }
