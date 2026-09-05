@@ -973,7 +973,6 @@ void render_map_boxes(int selected_map) {
             sbb1[start_y * 32 + start_x + 7] = SE_BUILD(tr, pal, 0, 0);
 
             // Interior rows (y = 1..3: rows 5..7 or 11..13)
-            bool is_unlocked = (g_game.maps_unlocked & (1 << idx)) != 0;
             for (int y = 1; y < 4; y++) {
                 int py = start_y + y;
                 sbb1[py * 32 + start_x] = SE_BUILD(l, pal, 0, 0);
@@ -1005,11 +1004,7 @@ void render_map_boxes(int selected_map) {
                 }
 
                 for (int x = 1; x < 7; x++) {
-                    if (!is_unlocked && y >= 2) {
-                        sbb1[py * 32 + start_x + x] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
-                    } else {
-                        sbb1[py * 32 + start_x + x] = SE_BUILD(tile_fill, 2 + idx, 0, 0);
-                    }
+                    sbb1[py * 32 + start_x + x] = SE_BUILD(tile_fill, 2 + idx, 0, 0);
                 }
                 sbb1[py * 32 + start_x + 7] = SE_BUILD(right, pal, 0, 0);
             }
@@ -1024,11 +1019,15 @@ void render_map_boxes(int selected_map) {
         }
     }
 
-    // Sleek dark backdrop panel on BG1 behind subtitle & prompt text (rows 15..16)
-    for (int ty = 15; ty <= 16; ty++) {
+    // Backdrop on BG1 inside Rows 14..16 (tx 1..28, cols 1..28) behind row 1 prices
+    for (int ty = 14; ty <= 16; ty++) {
         for (int tx = 1; tx < 29; tx++) {
             sbb1[ty * 32 + tx] = SE_BUILD(TILE_HUD_BOX_BG, 2, 0, 0);
         }
+    }
+    // Clear Row 9 backdrop cleanly between Row 0 and Row 1
+    for (int tx = 0; tx < 30; tx++) {
+        sbb1[9 * 32 + tx] = 0;
     }
 }
 
@@ -1355,7 +1354,7 @@ void render_title_screen(void) {
     bool is_locked = !(g_game.cars_unlocked & (1 << g_game.car_color));
     char display_name[64];
     if (is_locked) {
-        sprintf(display_name, "%s [2000 G]", col_name);
+        sprintf(display_name, "%s [2000 C]", col_name);
     } else {
         sprintf(display_name, "%s", col_name);
     }
@@ -1370,18 +1369,18 @@ void render_title_screen(void) {
     }
     tte_write(name_buf);
 
-    // Show 2000 G price under locked cars (Pink on Row 0; Black, Yellow, Green on Row 1)
+    // Show 2000 C price under locked cars (Pink on Row 0; Black, Yellow, Green on Row 1)
     if (!(g_game.cars_unlocked & (1 << CAR_COLOR_PINK))) {
-        tte_write("#{P:176,72}#{ci:1}2000 G\n");
+        tte_write("#{P:176,72}#{ci:1}2000 C\n");
     }
     if (!(g_game.cars_unlocked & (1 << CAR_COLOR_BLACK))) {
-        tte_write("#{P:16,123}#{ci:1}2000 G\n");
+        tte_write("#{P:16,123}#{ci:1}2000 C\n");
     }
     if (!(g_game.cars_unlocked & (1 << CAR_COLOR_YELLOW))) {
-        tte_write("#{P:96,123}#{ci:1}2000 G\n");
+        tte_write("#{P:96,123}#{ci:1}2000 C\n");
     }
     if (!(g_game.cars_unlocked & (1 << CAR_COLOR_GREEN))) {
-        tte_write("#{P:176,123}#{ci:1}2000 G\n");
+        tte_write("#{P:176,123}#{ci:1}2000 C\n");
     }
 
     // Bottom Metallic Box: Only "COINS COLLECTED: %05d" vertically & horizontally centered (Rows 17..19, Y = 144)
@@ -1419,56 +1418,22 @@ void render_map_select_screen(void) {
     }
     tte_write(name_buf);
 
-    // Badges inside locked preview boxes
-    // Box 1 (Palm Beach, 1000 C): X=96, Y=48 / 56
+    // Show price under locked maps (Palm & Winter on Row 0; Orbital, Gothic, Maya on Row 1)
     if (!(g_game.maps_unlocked & (1 << MAP_BEACH))) {
-        tte_write("#{P:96,48}#{ci:4}LOCKED\n");
-        tte_write("#{P:96,56}#{ci:1}1000 C\n");
+        tte_write("#{P:96,72}#{ci:1}1000 C\n");
     }
-    // Box 2 (Winter Snow, 2000 C): X=176, Y=48 / 56
     if (!(g_game.maps_unlocked & (1 << MAP_WINTER))) {
-        tte_write("#{P:176,48}#{ci:4}LOCKED\n");
-        tte_write("#{P:176,56}#{ci:1}2000 C\n");
+        tte_write("#{P:176,72}#{ci:1}2000 C\n");
     }
-    // Box 3 (Cape Orbital, 3000 C): X=16, Y=96 / 104
     if (!(g_game.maps_unlocked & (1 << MAP_ORBITAL))) {
-        tte_write("#{P:16,96}#{ci:4}LOCKED\n");
-        tte_write("#{P:16,104}#{ci:1}3000 C\n");
+        tte_write("#{P:16,123}#{ci:1}3000 C\n");
     }
-    // Box 4 (Gothic Midnight, 4000 C): X=96, Y=96 / 104
     if (!(g_game.maps_unlocked & (1 << MAP_GOTHIC))) {
-        tte_write("#{P:96,96}#{ci:4}LOCKED\n");
-        tte_write("#{P:96,104}#{ci:1}4000 C\n");
+        tte_write("#{P:96,123}#{ci:1}4000 C\n");
     }
-    // Box 5 (Maya Temple, 5000 C): X=176, Y=96 / 104
     if (!(g_game.maps_unlocked & (1 << MAP_MAYA))) {
-        tte_write("#{P:176,96}#{ci:4}LOCKED\n");
-        tte_write("#{P:176,104}#{ci:1}5000 C\n");
+        tte_write("#{P:176,123}#{ci:1}5000 C\n");
     }
-
-    // Track Feature Subtitle or Lock Status at Y = 122 (inside rows 15..16 backdrop panel)
-    char sub_buf[128];
-    if (is_locked) {
-        char raw[64];
-        if (g_game.total_coins >= cost) {
-            sprintf(raw, "LOCKED: %d C  [A: UNLOCK]", cost);
-            int sx = 120 - ((int)strlen(raw) * 8) / 2;
-            if (sx < 8) sx = 8;
-            sprintf(sub_buf, "#{P:%d,122}#{ci:4}LOCKED: #{ci:1}%d C  #{ci:2}[A: UNLOCK]\n", sx, cost);
-        } else {
-            sprintf(raw, "LOCKED: %d C (NEED COINS)", cost);
-            int sx = 120 - ((int)strlen(raw) * 8) / 2;
-            if (sx < 8) sx = 8;
-            sprintf(sub_buf, "#{P:%d,122}#{ci:4}LOCKED: #{ci:1}%d C #{ci:4}(NEED COINS)\n", sx, cost);
-        }
-    } else {
-        const char *sub = g_map_theme_subtitles[g_game.map_theme];
-        int sub_len = (int)strlen(sub);
-        int sub_x = 120 - (sub_len * 8) / 2;
-        if (sub_x < 8) sub_x = 8;
-        sprintf(sub_buf, "#{P:%d,122}#{ci:3}%s\n", sub_x, sub);
-    }
-    tte_write(sub_buf);
 
     // Bottom Metallic Box: Only "COINS COLLECTED: %05d" vertically & horizontally centered (Rows 17..19, Y = 144)
     char coins_buf[64];
@@ -1476,7 +1441,7 @@ void render_map_select_screen(void) {
     int c_len = (int)strlen(coins_buf);
     int c_x = 120 - (c_len * 8) / 2;
     char tte_buf[96];
-    sprintf(tte_buf, "#{P:%d,144}COINS COLLECTED: %05d\n", c_x, g_game.total_coins);
+    sprintf(tte_buf, "#{P:%d,144}#{ci:3}COINS COLLECTED: #{ci:1}%05d\n", c_x, g_game.total_coins);
     tte_write(tte_buf);
 }
 
