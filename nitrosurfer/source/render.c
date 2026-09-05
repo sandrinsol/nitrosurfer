@@ -1410,9 +1410,14 @@ void render_map_select_screen(void) {
     sprintf(sub_buf, "#{P:%d,122}#{ci:3}%s\n", sub_x, sub);
     tte_write(sub_buf);
 
-    // Bottom Metallic Box Legend (Y in [136, 159])
-    tte_write("#{P:16,138}#{ci:3}PAD: #{ci:1}TRACK   #{ci:3}A/START: #{ci:1}RACE\n");
-    tte_write("#{P:16,147}#{ci:3}B: #{ci:1}BACK TO CARS\n");
+    // Bottom Metallic Box: Only "COINS COLLECTED: %06d" vertically & horizontally centered (Rows 17..19, Y = 144)
+    char coins_buf[64];
+    sprintf(coins_buf, "COINS COLLECTED: %06d", g_game.total_coins);
+    int c_len = (int)strlen(coins_buf);
+    int c_x = 120 - (c_len * 8) / 2;
+    char tte_buf[96];
+    sprintf(tte_buf, "#{P:%d,144}COINS COLLECTED: %06d\n", c_x, g_game.total_coins);
+    tte_write(tte_buf);
 }
 
 void render_hud(int *spr_idx_io) {
@@ -1485,7 +1490,7 @@ void render_gameover_screen(void) {
     tte_write(buf);
     sprintf(buf, "#{P:32,64}DISTANCE:      %06dm\n", g_game.distance_m);
     tte_write(buf);
-    sprintf(buf, "#{P:32,80}GOLD ACQUIRED:   +%03d\n", g_game.coins_collected);
+    sprintf(buf, "#{P:32,80}COINS ACQUIRED:   +%03d\n", g_game.coins_collected);
     tte_write(buf);
 
     if (g_game.is_new_high_score || (g_game.score >= g_game.high_score && g_game.score > 0)) {
